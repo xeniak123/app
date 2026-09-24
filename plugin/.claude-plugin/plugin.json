@@ -1,0 +1,12 @@
+{
+  "name": "tilecast",
+  "displayName": "Tilecast",
+  "version": "0.2.0",
+  "description": "Design posters, social posts, stories and banners out of tiles: one design renders into four formats, with previews for the agent and PNG + HTML export.",
+  "author": {
+    "name": "xeniak123",
+    "url": "https://github.com/xeniak123"
+  },
+  "repository": "https://github.com/xeniak123/app",
+  "keywords": ["design", "poster", "social-media", "banner", "mcp", "html", "png"]
+}

@@ -1,25 +1,12 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { fitText, useFontsVersion } from '../lib/fitText';
-import { patternUrl } from '../lib/patterns';
 import { KINDS } from '../model/kinds';
-import { hashString, layoutTiles } from '../model/layout';
+import { layoutTiles } from '../model/layout';
 import { paintTile } from '../model/paint';
-import { STYLES, type StyleSpec } from '../model/themes';
-import type { Design, Format, FormatId, Rect, Tile, TileKind } from '../model/types';
-
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
-
-const ALIGN: Record<TileKind, { justify: CSSProperties['justifyContent']; text: 'left' | 'center' }> = {
-  headline: { justify: 'flex-end', text: 'left' },
-  text: { justify: 'flex-start', text: 'left' },
-  number: { justify: 'center', text: 'center' },
-  cta: { justify: 'center', text: 'center' },
-  info: { justify: 'flex-end', text: 'left' },
-  image: { justify: 'flex-end', text: 'left' },
-  emoji: { justify: 'center', text: 'center' },
-  brand: { justify: 'center', text: 'left' },
-};
+import { STYLES } from '../model/themes';
+import type { Design, Format, FormatId, Rect, Tile } from '../model/types';
+import { tileRender } from '../render/tile';
 
 export interface DragInfo {
   active: string | null;
@@ -94,7 +81,6 @@ export function DesignCanvas({ design, format, selectedId, drag, animKey, onSele
               canvasW={size.w}
               canvasH={size.h}
               design={design}
-              style={style}
               formatId={format.id}
               index={index}
               selected={tile.id === selectedId}
@@ -115,7 +101,6 @@ interface TileViewProps {
   canvasW: number;
   canvasH: number;
   design: Design;
-  style: StyleSpec;
   formatId: FormatId;
   index: number;
   selected: boolean;
@@ -126,10 +111,10 @@ interface TileViewProps {
 }
 
 const TileView = memo(function TileView(props: TileViewProps) {
-  const { tile, rect, canvasW, canvasH, design, style, formatId, index, selected, dragging, over, animate, onSelect } =
-    props;
+  const { tile, rect, canvasW, canvasH, design, formatId, index, selected, dragging, over, animate, onSelect } = props;
   const spec = KINDS[tile.kind];
-  const paint = paintTile(tile, design.palette);
+  const view = tileRender(tile, rect, canvasW, canvasH, design);
+  const { font } = view;
 
   const dndId = `${formatId}::${tile.id}`;
   const draggable = useDraggable({ id: dndId, data: { tileId: tile.id } });
@@ -144,39 +129,12 @@ const TileView = memo(function TileView(props: TileViewProps) {
     [setDragRef, setDropRef],
   );
 
-  const shorter = Math.min(canvasW, canvasH);
-  const w = rect.w * canvasW;
-  const h = rect.h * canvasH;
-  const pad = Math.min(style.tilePadding * shorter, Math.min(w, h) * 0.18);
-  const boxW = Math.max(w - 2 * pad, 1);
-  const boxH = Math.max(h - 2 * pad, 1);
-  const radius = Math.min(style.radius * shorter, Math.min(w, h) * 0.3);
-
-  const isDisplay = spec.font === 'display';
-  const fontFamily = spec.font === 'emoji' ? EMOJI_FONT : isDisplay ? style.display : style.body;
-  const fontWeight = isDisplay ? style.displayWeight : tile.kind === 'cta' ? 600 : style.bodyWeight;
-  const showLogo = tile.kind === 'brand' && Boolean(tile.image);
-  const text = showLogo ? '' : tile.text;
-
   const textRef = useRef<HTMLDivElement>(null);
   const fontsVersion = useFontsVersion();
   useLayoutEffect(() => {
-    if (textRef.current) fitText(textRef.current, boxW, boxH, spec.maxFont * shorter);
-  }, [text, boxW, boxH, fontFamily, fontWeight, style, spec.maxFont, shorter, fontsVersion]);
+    if (textRef.current) fitText(textRef.current, view.boxW, view.boxH, view.maxFontPx);
+  }, [view.text, view.boxW, view.boxH, view.maxFontPx, font.family, font.weight, font.transform, font.letterSpacing, font.lineHeight, fontsVersion]);
 
-  let backgroundImage: string | undefined;
-  if (tile.kind === 'image') {
-    backgroundImage = tile.image
-      ? `url("${tile.image}")`
-      : patternUrl(
-          design.style,
-          paint.background === 'transparent' ? design.palette.bg : paint.background,
-          paint.color,
-          hashString(tile.id),
-        );
-  }
-
-  const align = ALIGN[tile.kind];
   const className = [
     'tile',
     `tile--${tile.kind}`,
@@ -201,11 +159,11 @@ const TileView = memo(function TileView(props: TileViewProps) {
           top: `${rect.y * 100}%`,
           width: `${rect.w * 100}%`,
           height: `${rect.h * 100}%`,
-          backgroundColor: paint.background,
-          backgroundImage,
-          color: paint.color,
-          borderRadius: radius,
-          boxShadow: paint.border ? `inset 0 0 0 ${Math.max(1, shorter * 0.002)}px ${paint.border}` : undefined,
+          backgroundColor: view.paint.background,
+          backgroundImage: view.backgroundImage,
+          color: view.paint.color,
+          borderRadius: view.radius,
+          boxShadow: view.boxShadow,
           '--i': index,
         } as CSSProperties
       }
@@ -220,24 +178,22 @@ const TileView = memo(function TileView(props: TileViewProps) {
         }
       }}
     >
-      {showLogo && (
-        <div className="tile__logo" style={{ inset: pad, backgroundImage: `url("${tile.image}")` }} />
-      )}
-      {text && (
-        <div className="tile__box" style={{ inset: pad, justifyContent: align.justify }}>
+      {view.logo && <div className="tile__logo" style={{ inset: view.pad, backgroundImage: `url("${view.logo}")` }} />}
+      {view.text && (
+        <div className="tile__box" style={{ inset: view.pad, justifyContent: font.justify }}>
           <div
             ref={textRef}
             className="tile__text"
             style={{
-              fontFamily,
-              fontWeight,
-              textAlign: align.text,
-              textTransform: isDisplay && style.uppercase && tile.kind !== 'brand' ? 'uppercase' : 'none',
-              letterSpacing: isDisplay ? style.letterSpacing : '0',
-              lineHeight: isDisplay ? style.lineHeight : 1.25,
+              fontFamily: font.family,
+              fontWeight: font.weight,
+              textAlign: font.align,
+              textTransform: font.transform,
+              letterSpacing: font.letterSpacing,
+              lineHeight: font.lineHeight,
             }}
           >
-            {text}
+            {view.text}
           </div>
         </div>
       )}
@@ -246,7 +202,7 @@ const TileView = memo(function TileView(props: TileViewProps) {
           + zdjęcie
         </div>
       )}
-      <div className="tile__ring" data-editor-only="" style={{ borderRadius: radius }} />
+      <div className="tile__ring" data-editor-only="" style={{ borderRadius: view.radius }} />
     </div>
   );
 });

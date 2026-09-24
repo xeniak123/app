@@ -20,6 +20,7 @@ import { loadProject, saveProject } from './lib/storage';
 import { createEditor, editorReducer } from './model/editor';
 import { FORMATS, getFormat } from './model/formats';
 import { designFromBrief } from './model/offline';
+import { slugify } from './model/slug';
 import type { Design, FormatId } from './model/types';
 
 type View = 'all' | FormatId;
@@ -46,19 +47,6 @@ function carryImages(previous: Design, next: Design): Design {
     if (source && targetIndex >= 0) tiles[targetIndex] = { ...tiles[targetIndex], image: source.image };
   }
   return { ...next, tiles };
-}
-
-function slugify(text: string): string {
-  return (
-    text
-      .toLowerCase()
-      .replaceAll('ł', 'l')
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 40) || 'tilecast'
-  );
 }
 
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));

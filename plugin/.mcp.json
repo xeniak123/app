@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tilecast": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/tilecast-mcp.mjs"]
+    }
+  }
+}

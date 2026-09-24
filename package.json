@@ -1,17 +1,24 @@
 {
   "name": "tilecast",
   "private": true,
-  "version": "0.1.0",
-  "description": "Jedna treść z kafelków, każdy format: AI układa plakat, post, story i baner z kodu frontendu.",
+  "version": "0.2.0",
+  "description": "Tilecast: MCP server, skill and Claude Code plugin that turn content into posters, social posts, stories and banners made of tiles.",
   "type": "module",
+  "bin": {
+    "tilecast-mcp": "plugin/server/tilecast-mcp.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:mcp": "vite build --config vite.mcp.config.ts && node -e \"require('fs').chmodSync('plugin/server/tilecast-mcp.mjs', 0o755)\"",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
+  "devDependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
     "@dnd-kit/core": "^6.3.1",
     "@fontsource/anton": "^5.3.0",
@@ -19,18 +26,17 @@
     "@fontsource/inter": "^5.3.0",
     "@fontsource/playfair-display": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
-    "html-to-image": "^1.11.13",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "zod": "^4.6.5"
-  },
-  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "html-to-image": "^1.11.13",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "zod": "^4.6.5"
   }
 }

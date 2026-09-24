@@ -1,67 +1,121 @@
 # Tilecast
 
-**Jedna treść, każdy format.** Opisujesz, co chcesz wypromować, a AI rozkłada treść na kafelki i od razu układa z nich plakat A4, post 1:1, story 9:16 i baner 16:9. Kafelki przestawiasz myszką, a zmiana pojawia się we wszystkich formatach naraz. Wszystko jest zwykłym HTML/CSS, więc tekst jest zawsze poprawny i ostry, a eksport do PNG działa w pełnej rozdzielczości (plakat w 300 dpi).
+**Plakaty, posty, story i banery projektowane przez Twojego agenta AI.** Tilecast to serwer MCP, skill i plugin do Claude Code. Działa też z Codex, Cursorem i każdym innym klientem MCP.
 
-![Tilecast: jeden projekt w czterech formatach](docs/screenshot.png)
+Agent pisze treść jako kafelki (nagłówek, zdjęcie, cena, szczegóły, wezwanie do działania). Tilecast układa z nich jednocześnie plakat A4, post 1:1, story 9:16 i baner 16:9. Agent dostaje podgląd wszystkich formatów jako obraz, przestawia kafelki narzędziami i eksportuje PNG w pełnej rozdzielczości oraz samodzielne pliki HTML. Wszystko powstaje z kodu frontendu (HTML/CSS), więc tekst jest zawsze poprawny, ostry i edytowalny.
 
-## Co potrafi
+![Podgląd, który agent dostaje po każdej zmianie](docs/agent-preview.png)
 
-- **Projekt z jednego zdania.** Wpisz np. „Pizzeria Roma – w piątek -30%, zamów na roma.pl”, a powstanie nagłówek, liczba, szczegóły i wezwanie do działania.
-- **4 formaty naraz.** Silnik układu dopasowuje te same kafelki do każdych proporcji, bez dziur i nakładania się.
-- **Przeciąganie kafelków.** Upuść kafelek na inny, żeby zamienić je miejscami. Jest też cofanie i ponawianie (Ctrl+Z / Ctrl+Shift+Z).
-- **Edycja kafelka:** treść, rodzaj, rozmiar (S–XL), tło (akcent / karta / kontrast / bez tła), własne zdjęcie albo logo.
-- **Wygląd:** 4 style typografii, 10 palet, własne kolory i przycisk „Inny układ”, który daje kolejne warianty.
-- **AI (Claude):** projekt z opisu oraz zmiany poleceniem, np. „bardziej elegancko” albo „dodaj godziny 12–22”. Twoje ręczne poprawki i zdjęcia zostają.
-- **Tryb offline:** bez klucza API projekt powstaje z prostych reguł, więc aplikację da się wypróbować od razu.
-- **Eksport PNG** każdego formatu w docelowej rozdzielczości, z osadzonymi fontami.
-- **Animacja wejścia kafelków** jako podgląd. To pierwszy krok do eksportu wideo.
-- Projekt zapisuje się automatycznie w przeglądarce.
+## Instalacja
 
-![Przykładowy eksport 1080×1080](docs/export-square.png)
+Do eksportu PNG potrzebny jest Node.js 20+ oraz Chrome, Chromium albo Edge. Eksport HTML działa bez przeglądarki.
 
-## Uruchomienie
+### Claude Code: plugin (serwer MCP + skill)
 
-Potrzebny jest Node.js 20 lub nowszy.
-
-```bash
-npm install
-cp .env.example .env   # opcjonalnie: wpisz ANTHROPIC_API_KEY, żeby projektowało AI
-npm run dev
+```
+/plugin marketplace add xeniak123/app
+/plugin install tilecast@tilecast
 ```
 
-Otwórz http://localhost:5173.
+Plugin dodaje serwer MCP `tilecast` oraz skill `/tilecast`. Skill uczy agenta, jak pisać kafelki i poprawiać projekt na podstawie podglądu. Wystarczy napisać np. „zrób plakat na koncert jazzowy w sobotę o 20:00 w Parku Miejskim”.
 
-Bez klucza aplikacja działa w trybie offline. Z kluczem przycisk zmienia się na „Zaprojektuj z AI”. Domyślny model to `claude-opus-5`; inny ustawisz zmienną `TILECAST_MODEL` w `.env`.
+### Claude Code: sam serwer MCP
 
-| Polecenie | Co robi |
+```bash
+git clone https://github.com/xeniak123/app tilecast
+claude mcp add tilecast -- node "$(pwd)/tilecast/plugin/server/tilecast-mcp.mjs"
+```
+
+### Codex
+
+```bash
+git clone https://github.com/xeniak123/app tilecast
+codex mcp add tilecast -- node "$(pwd)/tilecast/plugin/server/tilecast-mcp.mjs"
+mkdir -p ~/.codex/skills && cp -r tilecast/plugin/skills/tilecast ~/.codex/skills/
+```
+
+Zamiast `codex mcp add` możesz dopisać serwer ręcznie w `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.tilecast]
+command = "node"
+args = ["/pełna/ścieżka/tilecast/plugin/server/tilecast-mcp.mjs"]
+```
+
+### Cursor i inne klienty MCP
+
+```json
+{
+  "mcpServers": {
+    "tilecast": {
+      "command": "node",
+      "args": ["/pełna/ścieżka/tilecast/plugin/server/tilecast-mcp.mjs"]
+    }
+  }
+}
+```
+
+Jeśli repozytorium jest publiczne, zamiast klonowania możesz użyć `npx -y github:xeniak123/app` jako komendy serwera.
+
+## Narzędzia MCP
+
+| Narzędzie | Co robi |
 | --- | --- |
-| `npm run dev` | serwer deweloperski z API |
-| `npm test` | testy jednostkowe (Vitest) |
-| `npm run typecheck` | sprawdzenie typów TypeScript |
-| `npm run build` | build produkcyjny do `dist/` |
-| `npm run preview` | podgląd buildu produkcyjnego razem z API |
+| `create_design` | tworzy projekt z kafelków (albo szkic z jednego zdania) i zwraca podgląd 4 formatów |
+| `update_design` | zmienia projekt: `swap_tiles`, `move_tile`, `set_tile`, `add_tile`, `remove_tile`, `set_style`, `set_palette`, `next_layout`, `set_layout` |
+| `preview_design` | podgląd wszystkich formatów albo jednego w większym rozmiarze |
+| `export_design` | PNG (plakat 2480×3508 w 300 dpi, 1080×1080, 1080×1920, 1920×1080) + samodzielny HTML z animacją wejścia |
+| `list_designs`, `get_design` | lista zapisanych projektów i pełny JSON projektu |
+
+Projekty zapisują się w folderze projektu jako `tilecast/<id>.tilecast.json`, więc można je commitować. Eksport trafia do `tilecast/export/<id>/` albo do wskazanego folderu w projekcie, np. `public/promo` w aplikacji webowej. Zdjęcia i logo agent podaje ścieżką (`image_path`), a trafiają do projektu jako osadzone dane.
+
+Zmienne środowiskowe (opcjonalne):
+- `TILECAST_CHROME`: ścieżka do przeglądarki, jeśli nie zostanie znaleziona automatycznie,
+- `TILECAST_PROJECT_DIR`: folder projektu. Domyślnie `CLAUDE_PROJECT_DIR`, a gdy go brak, bieżący katalog.
 
 ## Jak to działa
 
-- **Silnik układu** (`src/model/layout.ts`) dzieli płótno rekurencyjnie na dwie części, jak w treemapie. Dzięki temu kafelki zawsze wypełniają całość. Programowanie dynamiczne sprawdza wszystkie cięcia i wybiera układ, w którym każdy kafelek ma pasujący kształt: nagłówek szeroki, zdjęcie mniej więcej kwadratowe, przycisk płaski. Kolejność kafelków to kolejność czytania.
-- **Dopasowanie tekstu** (`src/lib/fitText.ts`) szuka największego rozmiaru fontu, przy którym tekst mieści się w kafelku bez łamania słów.
-- **Kolory** (`src/model/paint.ts`, `src/model/color.ts`) pilnują kontrastu: jeśli kolor tekstu (również wybrany przez AI) jest nieczytelny, zmienia się na prawie czarny albo prawie biały.
-- **AI** (`server/ai.ts`) wywołuje Claude przez oficjalne SDK `@anthropic-ai/sdk` ze *structured outputs*, więc odpowiedź to zawsze poprawny JSON zgodny ze schematem (`server/schema.ts`). Prompt zabrania wymyślania cen, dat i adresów, których nie ma w opisie. Włączone są serwerowe fallbacki (`fallbacks: "default"`): gdy model odmówi, zapytanie automatycznie przechodzi na model zapasowy.
-- **Klucz API zostaje na serwerze.** Endpointy `/api/status`, `/api/generate` i `/api/refine` obsługuje wtyczka Vite (`server/plugin.ts`), która działa zarówno w `npm run dev`, jak i w `npm run preview`.
-- **Eksport** (`src/lib/exportPng.ts`) renderuje podgląd przez `html-to-image` od razu w docelowej rozdzielczości. Elementy edytora (obramowania zaznaczenia, podpowiedzi) są pomijane.
+- **Silnik układu** (`src/model/layout.ts`) dzieli płótno rekurencyjnie jak treemapa. Programowanie dynamiczne wybiera cięcia tak, żeby każdy kafelek dostał pasujący kształt (nagłówek szeroki, zdjęcie mniej więcej kwadratowe, przycisk płaski), bez dziur i nakładania się. Kolejność kafelków to kolejność czytania, więc zamiana dwóch kafelków zmienia układ we wszystkich formatach naraz.
+- **Renderer HTML** (`src/render/`) tworzy samodzielną stronę z osadzonymi czcionkami (łacińskie i środkowoeuropejskie znaki) oraz małym skryptem, który dobiera największy rozmiar tekstu mieszczący się w kafelku. Ten sam kod rysuje kafelki w edytorze.
+- **Zrzuty PNG** (`mcp/chrome.ts`) robi zainstalowany Chrome w trybie headless, sterowany przez protokół DevTools. Rozmiar jest zawsze dokładny, a zrzut powstaje dopiero po dopasowaniu tekstu. Serwer nie potrzebuje Puppeteera ani Playwrighta.
+- **Serwer MCP** (`mcp/`) jest spakowany do jednego pliku `plugin/server/tilecast-mcp.mjs` razem z zależnościami i czcionkami, więc plugin działa bez `npm install`.
+- **Kontrast** pilnuje czytelności: jeśli wybrany kolor tekstu (np. własny kolor marki) jest nieczytelny na tle, zmienia się na prawie czarny albo prawie biały.
+
+## Tilecast Studio (edytor wizualny)
+
+W repozytorium jest też edytor w przeglądarce, w którym kafelki przestawia się myszką i od razu widzi wszystkie formaty.
+
+```bash
+npm install
+npm run dev   # http://localhost:5173
+```
+
+Studio działa bez klucza. Z kluczem `ANTHROPIC_API_KEY` w pliku `.env` (zob. `.env.example`) potrafi też samo zaprojektować grafikę z opisu i zmieniać ją poleceniem.
+
+![Tilecast Studio](docs/studio.png)
+
+## Rozwój
+
+| Polecenie | Co robi |
+| --- | --- |
+| `npm test` | testy: silnik układu, renderer, serwer MCP (także spakowany, przez stdio) i zrzuty z Chrome |
+| `npm run typecheck` | sprawdzenie typów |
+| `npm run build:mcp` | przebudowanie `plugin/server/tilecast-mcp.mjs`. Uruchom je po zmianach w `mcp/` lub `src/` i zacommituj wynik |
+| `npm run dev` / `npm run build` | Studio: serwer deweloperski / build produkcyjny |
 
 ```
-src/
-  model/        typy, silnik układu, generator offline, kolory, historia zmian (+ testy)
-  components/   płótno z kafelkami, panel boczny
-  lib/          dopasowanie tekstu, eksport PNG, API, zapis w przeglądarce, wzory SVG
-server/         wywołania Claude, schemat odpowiedzi, wtyczka Vite z endpointami
+mcp/            serwer MCP: narzędzia, operacje na kafelkach, zapis projektów, Chrome
+plugin/         plugin Claude Code: manifest, .mcp.json, skill, spakowany serwer
+src/model/      typy, silnik układu, kolory, generator szkicu z opisu (+ testy)
+src/render/     wspólny renderer kafelków i samodzielny HTML
+src/components/ Studio (React)
+server/         endpointy AI dla Studio (Claude API)
 ```
 
 ## Co dalej
 
-- Eksport MP4 z animacji kafelków (np. przez HyperFrames albo Remotion).
+- Eksport MP4 z animacji kafelków.
 - Więcej formatów, np. okładka na Facebooka, LinkedIn, ulotka A5.
-- Zestaw marki: logo, kolory i fonty zapamiętane dla całej firmy.
-- Generowanie serii grafik z arkusza (np. osobny plakat dla każdego produktu).
-- Angielska wersja interfejsu i samodzielny serwer do wdrożenia w internecie.
+- Zestaw marki (logo, kolory, fonty) zapamiętany w projekcie.
+- Serie grafik z arkusza, np. osobny plakat dla każdego produktu.
+- Otwieranie projektu z MCP w Studio, żeby człowiek mógł przeciągać kafelki, a agent widział zmiany.

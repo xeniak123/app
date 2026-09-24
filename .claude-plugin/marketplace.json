@@ -1,0 +1,14 @@
+{
+  "name": "tilecast",
+  "description": "Tilecast: posters, social posts, stories and banners designed by your coding agent.",
+  "owner": {
+    "name": "xeniak123"
+  },
+  "plugins": [
+    {
+      "name": "tilecast",
+      "source": "./plugin",
+      "description": "Posters, social posts, stories and banners from tiles: one design, four formats, PNG and HTML export."
+    }
+  ]
+}

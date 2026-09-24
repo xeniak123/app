@@ -40,7 +40,7 @@ Wydarzenia, kawiarnia, pracownia i sklep w przykładach są fikcyjne.
      ✗ [2.6s] "To zdanie ma dziesięć słów…" is readable for 1.1s but needs ~3.3s (11 words).
      ! [2.2s] "Szybki błysk" flashes by (0.3s). Hold it or drop it.
    ```
-5. **`render_image` / `render_video`.** PNG w pełnej rozdzielczości i PDF w dokładnym formacie papieru, albo MP4 (H.264 + AAC) z najlepszą klatką jako klatką 0. Dzięki temu miniatura na każdej platformie pokazuje najlepszy moment, a nie czarny ekran.
+5. **`render_image` / `render_video`.** PNG w pełnej rozdzielczości i PDF w dokładnym formacie papieru, albo MP4 (H.264 + AAC) z najlepszą klatką jako klatką 0. Dzięki temu miniatura na każdej platformie pokazuje najlepszy moment, a nie czarny ekran. Na życzenie powstaje też samodzielny plik HTML, który można wstawić na stronę jako żywą, animowaną grafikę.
 
 ## Instalacja
 
@@ -99,7 +99,7 @@ Agenci bez obsługi skilli dostają cały poradnik przez narzędzie `guide`, a s
 | --- | --- |
 | `preview` | obraz kompozycji: formaty obok siebie albo taśma klatek filmu (sceny i cięcia) + szybka ocena krytyka |
 | `check` | krytyk: tekst poza kadrem, ucięty albo zasłonięty, kolizje, za mały tekst, kontrast mierzony na pikselach (także na zdjęciach i gradientach), brakujące fonty i obrazki, zasoby z sieci, błędy skryptów; w wideo czas czytania każdej linijki, błyski, pusty początek lub koniec, brak dźwięku i propozycja klatki-okładki |
-| `render_image` | PNG każdego formatu (A4/A3/A5 w 300 dpi + PDF w wymiarze papieru, social w natywnym rozmiarze) |
+| `render_image` | PNG każdego formatu (A4/A3/A5 w 300 dpi + PDF w wymiarze papieru, social w natywnym rozmiarze); z `html: true` także samodzielna strona do wstawienia na stronę internetową: fonty i obrazki w środku, animacje grają na żywo, kadr skaluje się do okna |
 | `render_video` | MP4 30 fps z miksem ścieżek `<audio data-tilecast>` wyrównanym do -14 LUFS, kolory BT.709, okładka jako klatka 0 i osobny `.jpg`; `quality: "draft"` renderuje szybką wersję w połowie rozmiaru |
 | `assets` | `list_fonts`, `find_icons` / `get_icons` (1854 ikony Lucide jako SVG), `make_music` (podkład z siatką beatów), `analyze_music` (beaty i mocne momenty Twojego utworu), `make_sfx` (whoosh, riser, impact…), `list_sfx` / `add_sfx` (efekty CC0), `list_formats` |
 | `guide` | poradnik: workflow, design, ruch, tony, audio, runtime |

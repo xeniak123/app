@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -187,6 +188,63 @@ describe.skipIf(!chrome)('tools', () => {
     const box = pdf.match(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/);
     expect(Number(box?.[1])).toBeCloseTo(595.3, 0);
     expect(Number(box?.[2])).toBeCloseTo(841.9, 0);
+  }, 60_000);
+
+  it('exports one self-contained web page that works without Tilecast', async () => {
+    const dot = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    await mkdir(path.join(root, 'site/img'), { recursive: true });
+    await writeFile(path.join(root, 'site/img/dot.png'), dot);
+    await writeFile(path.join(root, 'site/look.css'), `.bg { background: url(img/dot.png) 0 0 / 8px 8px; }`);
+    await writeFile(
+      path.join(root, 'site/card.html'),
+      `<!doctype html><html><head><meta charset="utf-8"><meta name="tilecast:formats" content="square">
+<link rel="stylesheet" href="look.css">
+<style>h1 { font: 800 60px 'Bricolage Grotesque'; }</style></head>
+<body class="bg"><h1>Zażółć</h1><img src="img/dot.png" width="10" height="10"><p id="t"></p>
+<audio data-tilecast src="audio/music.wav" data-start="0"></audio>
+<script>tilecast.onFrame(() => { document.getElementById('t').textContent = tilecast.tween(0, 1, 0, 10, 'linear').toFixed(1); });</script>
+</body></html>`,
+    );
+    const out = textOf(await service.renderImage({ file: 'site/card.html', html: true, pdf: false }));
+    expect(out).toMatch(/site\/export\/card-square\.html {2}self-contained web page, .*, scales to any window/);
+    expect(out).toContain('3 file(s) inlined');
+    expect(out).toContain('aspect-ratio:1080/1080');
+    const html = await readFile(path.join(root, 'site/export/card-square.html'), 'utf8');
+    expect(html).toContain("@font-face{font-family:'Bricolage Grotesque'");
+    expect(html).not.toContain('data-tilecast');
+    expect(html).not.toMatch(/(?:src|url\()(?:&quot;|["(])?img\/dot\.png/);
+    // The charset comes first, so Polish letters survive.
+    expect(html.indexOf('charset')).toBeLessThan(200);
+
+    // Opened in a plain browser tab, without Tilecast's runtime, it still has its fonts, images and motion.
+    await service.pool.use(async (browser) => {
+      const page = await browser.newPage({ width: 400, height: 400 });
+      try {
+        await page.goto(pathToFileURL(path.join(root, 'site/export/card-square.html')).href);
+        const state = await page.evaluate<{ font: boolean; image: number; tween: string; files: number; shown: number }>(`(async () => {
+          const frame = document.querySelector('iframe');
+          const inner = frame.contentWindow;
+          await new Promise((r) => (inner.document.readyState === 'complete' ? r() : frame.addEventListener('load', r)));
+          await inner.document.fonts.ready;
+          await new Promise((r) => setTimeout(r, 300));
+          return {
+            font: inner.document.fonts.check('800 60px "Bricolage Grotesque"', 'Zażółć'),
+            image: inner.document.images[0].naturalWidth,
+            tween: inner.document.getElementById('t').textContent,
+            files: [performance, inner.performance].flatMap((p) => p.getEntriesByType('resource')).filter((e) => e.name.startsWith('file:')).length,
+            shown: Math.round(frame.getBoundingClientRect().width),
+          };
+        })()`);
+        expect(state.font).toBe(true);
+        expect(state.image).toBe(1);
+        expect(Number(state.tween)).toBeGreaterThan(0);
+        expect(state.files).toBe(0);
+        // The 1080×1080 canvas is scaled down to the 400 px window.
+        expect(state.shown).toBe(400);
+      } finally {
+        await page.close();
+      }
+    });
   }, 60_000);
 
   it('serves fonts, icons and sound effects', async () => {

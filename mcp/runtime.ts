@@ -82,7 +82,54 @@ export interface CompositionInfo {
 /** [key, words, opacity, inside, x, y, width, height, text, fontSize] */
 export type TextSample = [string, number, number, number, number, number, number, number, string, number];
 
-function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
+/**
+ * Easing, tweening and seeded randomness on a clock in seconds. Shared by the
+ * render runtime (virtual time) and standalone pages (real time); serialized
+ * with toString(), so it must not reference anything outside its own body.
+ */
+export function tilecastHelpers(clock: () => number) {
+  const back = 1.70158;
+  const ease: Record<string, (x: number) => number> = {
+    linear: (x) => x,
+    in: (x) => x * x * x,
+    out: (x) => 1 - (1 - x) ** 3,
+    inOut: (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2),
+    outQuart: (x) => 1 - (1 - x) ** 4,
+    outExpo: (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x)),
+    inExpo: (x) => (x <= 0 ? 0 : 2 ** (10 * x - 10)),
+    inOutExpo: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? 2 ** (20 * x - 10) / 2 : (2 - 2 ** (-20 * x + 10)) / 2),
+    outBack: (x) => 1 + (back + 1) * (x - 1) ** 3 + back * (x - 1) ** 2,
+    spring: (x) => (x >= 1 ? 1 : 1 - Math.exp(-6 * x) * Math.cos(10 * x)),
+  };
+  const easing = (name: string | ((x: number) => number) = 'out') => (typeof name === 'function' ? name : (ease[name] ?? ease.out));
+  /** 0..1 progress of a move that starts at `start` and lasts `duration` seconds, eased. */
+  const progress = (start: number, duration: number, how?: string | ((x: number) => number)) => {
+    const t = clock();
+    const x = duration <= 0 ? (t >= start ? 1 : 0) : Math.min(1, Math.max(0, (t - start) / duration));
+    return easing(how)(x);
+  };
+  return {
+    ease,
+    progress,
+    /** Value between `from` and `to` for a move from `start` lasting `duration` seconds. */
+    tween(start: number, duration: number, from: number, to: number, how?: string | ((x: number) => number)) {
+      return from + (to - from) * progress(start, duration, how);
+    },
+    /** A seeded random number generator: the same seed gives the same sequence in every frame. */
+    random(seed = 1) {
+      let a = seed >>> 0;
+      return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    },
+  };
+}
+
+function tilecastRuntime(config: { fonts: RuntimeFont[] }, makeHelpers: typeof tilecastHelpers) {
   const w = window as any;
   if (w.__tilecast) return;
 
@@ -156,24 +203,7 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
   window.addEventListener('error', (event) => note(event.error ?? event.message));
   window.addEventListener('unhandledrejection', (event) => note(event.reason));
 
-  const back = 1.70158;
-  const ease: Record<string, (x: number) => number> = {
-    linear: (x) => x,
-    in: (x) => x * x * x,
-    out: (x) => 1 - (1 - x) ** 3,
-    inOut: (x) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2),
-    outQuart: (x) => 1 - (1 - x) ** 4,
-    outExpo: (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x)),
-    inExpo: (x) => (x <= 0 ? 0 : 2 ** (10 * x - 10)),
-    inOutExpo: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? 2 ** (20 * x - 10) / 2 : (2 - 2 ** (-20 * x + 10)) / 2),
-    outBack: (x) => 1 + (back + 1) * (x - 1) ** 3 + back * (x - 1) ** 2,
-    spring: (x) => (x >= 1 ? 1 : 1 - Math.exp(-6 * x) * Math.cos(10 * x)),
-  };
-  const easing = (name: string | ((x: number) => number) = 'out') => (typeof name === 'function' ? name : (ease[name] ?? ease.out));
-  const progress = (start: number, duration: number, how?: string | ((x: number) => number)) => {
-    const x = duration <= 0 ? (now / 1000 >= start ? 1 : 0) : Math.min(1, Math.max(0, (now / 1000 - start) / duration));
-    return easing(how)(x);
-  };
+  const helpers = makeHelpers(() => now / 1000);
 
   w.tilecast = {
     /** The render clock in seconds. */
@@ -184,24 +214,7 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
     onFrame(fn: (t: number) => unknown) {
       hooks.push(fn);
     },
-    ease,
-    /** 0..1 progress of a move that starts at `start` and lasts `duration` seconds, eased. */
-    progress,
-    /** Value between `from` and `to` for a move from `start` lasting `duration` seconds. */
-    tween(start: number, duration: number, from: number, to: number, how?: string | ((x: number) => number)) {
-      return from + (to - from) * progress(start, duration, how);
-    },
-    /** A seeded random number generator: the same seed gives the same sequence in every frame. */
-    random(seed = 1) {
-      let a = seed >>> 0;
-      return () => {
-        a = (a + 0x6d2b79f5) >>> 0;
-        let t = a;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      };
-    },
+    ...helpers,
   };
 
   const num = (value: string | null | undefined, fallback: number | null) => {
@@ -632,5 +645,5 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
 }
 
 export function runtimeScript(fonts: RuntimeFont[]): string {
-  return `(${tilecastRuntime.toString()})(${JSON.stringify({ fonts })});`;
+  return `(${tilecastRuntime.toString()})(${JSON.stringify({ fonts })}, ${tilecastHelpers.toString()});`;
 }

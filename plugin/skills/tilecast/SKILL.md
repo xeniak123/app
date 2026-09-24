@@ -95,7 +95,7 @@ For video audio: `assets` `make_music` with the planned style and duration, or t
 
 ## Step 5: Render and deliver
 
-- **Images:** `render_image`. Print formats come out at 300 dpi as PNG plus a PDF of the exact paper size; social formats at their native size.
+- **Images:** `render_image`. Print formats come out at 300 dpi as PNG plus a PDF of the exact paper size; social formats at their native size. When the piece goes on a website (a hero banner, an event page, an animated announcement), add `html: true`: one self-contained page per format with fonts and images inside, animations playing live, scaled to any window or iframe.
 - **Video:** `render_video` renders the final MP4 at 30 fps with the music and effects mixed. The best settled frame becomes frame 0 and is also saved as `.jpg`, so every platform's thumbnail shows it: set `tilecast:poster` to your strongest settled moment (the hook line, the reveal, or the final logo), or let Tilecast pick the moment with the most settled large type. `quality: "draft"` renders a quick half-size version first when the user wants to see motion before the final.
 - **Share copy:** write `tilecast/<slug>/share-copy.txt`: 1–3 sentences, postable as-is, specific, in the tone. No "excited to share".
 - **Tell the user** where the files are, the idea in one sentence, and offer one next step: another tone, another format, or re-rolling a scene or the music.

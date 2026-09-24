@@ -108,7 +108,8 @@ export function createTilecastServer(service: TilecastService): McpServer {
     {
       title: 'Render images',
       description:
-        'Render full-resolution PNGs of every format: A4/A3/A5 posters at 300 dpi plus a print PDF of the exact paper size, social formats 1:1, og at 2×. ' +
+        'Render full-resolution PNGs of every format: A4/A3/A5 posters at 300 dpi plus a print PDF of the exact paper size, social formats 1:1, og at 2×; ' +
+        'with html, also one self-contained web page of the piece. ' +
         'Default folder: export/ next to the composition.',
       inputSchema: {
         file,
@@ -116,6 +117,10 @@ export function createTilecastServer(service: TilecastService): McpServer {
         time: z.number().min(0).optional().describe('Moment to capture, in seconds. Default: tilecast:poster, else when the entrance animations have finished.'),
         out_dir: z.string().optional().describe('Folder inside the project, e.g. "public/promo".'),
         pdf: z.boolean().optional().describe('Write print PDFs for print formats (default true).'),
+        html: z
+          .boolean()
+          .optional()
+          .describe('Also write one self-contained .html page (fonts and local images inlined, animations playing live) to put on a website.'),
       },
     },
     async (args) => {

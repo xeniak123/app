@@ -14,6 +14,7 @@ import { decodePng } from './png';
 import type { CompositionInfo, TextSample } from './runtime';
 import { makeMusic, makeSfx, SFX_KINDS, type MusicStyle, type SfxKind } from './music';
 import { soundEffectFile, SOUND_EFFECTS } from './sfx';
+import { fittedPage, standaloneHtml } from './standalone';
 import { contactSheet, SHEET_GAP, SHEET_PAD, type SheetItem } from './sheet';
 import { captureWorkers, renderVideo } from './video';
 
@@ -343,7 +344,7 @@ export class TilecastService {
   }
 
   /** Full-resolution PNGs (and print PDFs) of every format. */
-  async renderImage(args: { file: string; formats?: string[]; time?: number; out_dir?: string; pdf?: boolean }): Promise<ToolResult> {
+  async renderImage(args: { file: string; formats?: string[]; time?: number; out_dir?: string; pdf?: boolean; html?: boolean }): Promise<ToolResult> {
     const comp = await loadComposition(this.root, args.file);
     const formats = resolveFormats(comp, args.formats);
     const outDir = this.outputDir(comp, args.out_dir);
@@ -351,6 +352,7 @@ export class TilecastService {
     return this.pool.use(async (browser) => {
       const lines: string[] = [];
       const warnings: Issue[] = [];
+      const backgrounds = new Map<string, string>();
       for (const format of formats) {
         const stage = await Stage.open(browser, comp, format);
         try {
@@ -358,6 +360,14 @@ export class TilecastService {
           const t = stillTime(info, args.time);
           await stage.seek(t);
           const png = await stage.capture();
+          // The margins of the web page take the color at the canvas edge (gradients and images included).
+          try {
+            const edge = decodePng(await stage.capture({ zoom: 0.1 }));
+            const [r, g, b] = [0, 1, 2].map((c) => Math.round((edge.at(1, 1)[c] + edge.at(edge.width - 2, edge.height - 2)[c]) / 2));
+            backgrounds.set(format.id, `rgb(${r}, ${g}, ${b})`);
+          } catch {
+            // Default margins are black.
+          }
           const audit = await stage.audit();
           warnings.push(...frameIssues(audit, null, format.id, false).filter((i) => i.level === 'error'));
           const base = path.join(outDir, `${comp.name}-${format.id}`);
@@ -372,6 +382,18 @@ export class TilecastService {
         } finally {
           await stage.close();
         }
+      }
+      if (args.html) {
+        const page = await standaloneHtml(comp);
+        for (const format of formats) {
+          const file = path.join(outDir, `${comp.name}-${format.id}.html`);
+          const html = fittedPage(page.html, format, { title: comp.name, background: backgrounds.get(format.id) ?? '#000' });
+          await writeFile(file, html);
+          lines.push(`  ${this.relative(file)}  self-contained web page, ${await fileSize(file)}, scales to any window`);
+        }
+        lines.push(
+          `  ${page.inlined} file(s) inlined${page.linked.length ? `; left as links next to the page: ${page.linked.join(', ')}` : ''}. Embed: <iframe src="${comp.name}-${formats[0].id}.html" style="width:100%;aspect-ratio:${formats[0].width}/${formats[0].height};border:0"></iframe>`,
+        );
       }
       const note = warnings.length ? `\n\nThe critic still sees problems (run check):\n${formatIssues(warnings)}` : '';
       return { content: [text(`Rendered ${comp.relative}:\n${lines.join('\n')}${note}`)] };

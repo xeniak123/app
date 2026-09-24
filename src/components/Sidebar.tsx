@@ -1,13 +1,27 @@
 import { useState, type Dispatch } from 'react';
 import type { AiStatus } from '../lib/api';
 import { readImage } from '../lib/image';
+import { newArtSeed } from '../model/ids';
 import type { EditorAction } from '../model/editor';
-import { KINDS, SIZE_LABEL, TONE_LABEL } from '../model/kinds';
+import { KINDS, MOTIF_LABEL, SIZE_LABEL, TONE_LABEL } from '../model/kinds';
+import { hashString } from '../model/layout';
 import { makeTile } from '../model/offline';
 import { paintTile } from '../model/paint';
 import { MAX_TILES } from '../model/sanitize';
 import { PALETTES, STYLES } from '../model/themes';
-import { STYLE_IDS, TILE_KINDS, TILE_SIZES, TILE_TONES, type Design, type Palette, type Tile } from '../model/types';
+import {
+  ART_MOTIFS,
+  STYLE_IDS,
+  TILE_KINDS,
+  TILE_SIZES,
+  TILE_TONES,
+  type ArtMotif,
+  type Design,
+  type Palette,
+  type Tile,
+  type TileArt,
+} from '../model/types';
+import { ICON_NAMES } from '../render/icons';
 
 export type Busy = 'generate' | 'refine' | 'export' | null;
 
@@ -346,6 +360,8 @@ function TileInspector({
         </div>
       )}
 
+      {tile.kind === 'image' && !tile.image && <ArtControls tile={tile} onChange={(art) => update({ art })} />}
+
       <div className="field">
         <span>Rozmiar</span>
         <div className="segmented">
@@ -407,6 +423,54 @@ function TileInspector({
           }}
         >
           Usuń
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Picks the generated picture of an image tile that has no photo. */
+function ArtControls({ tile, onChange }: { tile: Tile; onChange: (art: TileArt) => void }) {
+  // Tiles from before artwork seeds existed fall back to the seed the renderer derives from the id.
+  const art: TileArt = tile.art ?? { seed: hashString(tile.id) };
+  const icon = art.icon === undefined ? 'auto' : art.icon === null ? 'none' : art.icon;
+  return (
+    <div className="field">
+      <span>Obrazek (zanim dodasz zdjęcie)</span>
+      <div className="art-controls">
+        <select
+          className="input"
+          aria-label="Motyw obrazka"
+          value={art.motif ?? ''}
+          onChange={(e) => onChange({ ...art, motif: (e.target.value || undefined) as ArtMotif | undefined })}
+        >
+          <option value="">Motyw: automatyczny</option>
+          {ART_MOTIFS.map((motif) => (
+            <option key={motif} value={motif}>
+              {MOTIF_LABEL[motif]}
+            </option>
+          ))}
+        </select>
+        <select
+          className="input"
+          aria-label="Ikona na obrazku"
+          value={icon}
+          onChange={(e) => {
+            const { icon: _previous, ...rest } = art;
+            const value = e.target.value;
+            onChange(value === 'auto' ? rest : { ...rest, icon: value === 'none' ? null : value });
+          }}
+        >
+          <option value="auto">Ikona: pasująca do tematu</option>
+          <option value="none">Bez ikony</option>
+          {ICON_NAMES.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <button className="btn" type="button" onClick={() => onChange({ ...art, seed: newArtSeed() })}>
+          ⟳ Losuj inny obrazek
         </button>
       </div>
     </div>

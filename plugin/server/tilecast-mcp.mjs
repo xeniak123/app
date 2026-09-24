@@ -8008,6 +8008,10 @@ function newId() {
 	counter = (counter + 1) % 1e6;
 	return `t${Date.now().toString(36)}${counter.toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
+/** Random seed for an image tile's generated artwork, so every new tile gets a different picture. */
+function newArtSeed() {
+	return Math.floor(Math.random() * 2147483647);
+}
 //#endregion
 //#region src/model/layout.ts
 /** Subproblems whose aspect ratios differ by less than this (in log space) share a solution. */
@@ -8283,10 +8287,10 @@ var PALETTES = [
 * phrases and sorts them into headline, numbers, details and call to action.
 * Used when no API key is configured, and as the instant first draft.
 */
-var L = "(?<![\\p{L}\\p{N}])";
+var L$1 = "(?<![\\p{L}\\p{N}])";
 var R = "(?![\\p{L}\\p{N}])";
-var words = (list) => new RegExp(`${L}(?:${list})${R}`, "iu");
-var stems = (list) => new RegExp(`${L}(?:${list})`, "iu");
+var words = (list) => new RegExp(`${L$1}(?:${list})${R}`, "iu");
+var stems$1 = (list) => new RegExp(`${L$1}(?:${list})`, "iu");
 var URL_RE = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:pl|com|eu|org|net|io|app|dev|shop|store|co|de|uk|info|biz)(?:\/\S*)?/i;
 var EMAIL_RE = /\S+@\S+\.\w+/;
 var PHONE_RE = /\+?\d[\d\s-]{7,}\d/;
@@ -8318,51 +8322,51 @@ var FILLER = /* @__PURE__ */ new Set([
 var ABBREVIATIONS = /(^|\s)(ul|al|pl|os|godz|tel|np|św|ok|ks|dr|prof|nr|m\.in)\.\s/giu;
 var GLUE = "";
 var EMOJIS = [
-	[stems("pizz"), "🍕"],
-	[stems("burger"), "🍔"],
-	[stems("sushi"), "🍣"],
-	[stems("kaw[aęyi]|kawiar|coffee|cafe|café|espresso"), "☕"],
-	[stems("ciast|tort|cake|cukier|deser|pączk"), "🍰"],
-	[stems("lody|lodów|ice cream|gelato"), "🍦"],
-	[stems("win[oa]|wine|winiar"), "🍷"],
-	[stems("piw|beer|browar"), "🍺"],
-	[stems("koncert|muzy|music|festiwal|festival|dj"), "🎵"],
-	[stems("impre|party|urodzin|birthday|zabaw"), "🎉"],
-	[stems("trening|siłowni|fitness|gym|biegani|maraton|sport"), "💪"],
-	[stems("jog[aię]|yoga|medyt"), "🧘"],
-	[stems("książ|book|czyta|bibliot"), "📚"],
-	[stems("kurs|szkoleni|warsztat|lekcj|course|workshop|webinar"), "🎓"],
-	[stems("kwiat|flower|ogród|ogrod|garden|rośli"), "🌸"],
-	[stems("pies|psa|psy|psów|dog|zwierz|kot|cat"), "🐾"],
-	[stems("kino|film|movie|cinema"), "🎬"],
-	[stems("gaming|gier|game"), "🎮"],
-	[stems("podróż|wakacj|travel|urlop"), "✈️"],
-	[stems("rower|bike"), "🚲"],
-	[stems("fryzj|beauty|urod|kosmet|makijaż|paznok"), "💅"],
-	[stems("zdrow|lekarz|klinik|health|dent"), "🩺"],
-	[stems("eko|recykl|natur"), "🌿"],
-	[stems("techn|aplikac|softw|startup|kod|programow"), "🚀"],
-	[stems("promoc|rabat|zniżk|sale|wyprzeda|okazj|black friday"), "🔥"],
-	[stems("święt|christmas|mikołaj"), "🎄"],
-	[stems("walentyn|miłoś|love"), "❤️"],
-	[stems("otwarci|premier|nowość|nowy|nowa|launch"), "✨"]
+	[stems$1("pizz"), "🍕"],
+	[stems$1("burger"), "🍔"],
+	[stems$1("sushi"), "🍣"],
+	[stems$1("kaw[aęyi]|kawiar|coffee|cafe|café|espresso"), "☕"],
+	[stems$1("ciast|tort|cake|cukier|deser|pączk"), "🍰"],
+	[stems$1("lody|lodów|ice cream|gelato"), "🍦"],
+	[stems$1("win[oa]|wine|winiar"), "🍷"],
+	[stems$1("piw|beer|browar"), "🍺"],
+	[stems$1("koncert|muzy|music|festiwal|festival|dj"), "🎵"],
+	[stems$1("impre|party|urodzin|birthday|zabaw"), "🎉"],
+	[stems$1("trening|siłowni|fitness|gym|biegani|maraton|sport"), "💪"],
+	[stems$1("jog[aię]|yoga|medyt"), "🧘"],
+	[stems$1("książ|book|czyta|bibliot"), "📚"],
+	[stems$1("kurs|szkoleni|warsztat|lekcj|course|workshop|webinar"), "🎓"],
+	[stems$1("kwiat|flower|ogród|ogrod|garden|rośli"), "🌸"],
+	[stems$1("pies|psa|psy|psów|dog|zwierz|kot|cat"), "🐾"],
+	[stems$1("kino|film|movie|cinema"), "🎬"],
+	[stems$1("gaming|gier|game"), "🎮"],
+	[stems$1("podróż|wakacj|travel|urlop"), "✈️"],
+	[stems$1("rower|bike"), "🚲"],
+	[stems$1("fryzj|beauty|urod|kosmet|makijaż|paznok"), "💅"],
+	[stems$1("zdrow|lekarz|klinik|health|dent"), "🩺"],
+	[stems$1("eko|recykl|natur"), "🌿"],
+	[stems$1("techn|aplikac|softw|startup|kod|programow"), "🚀"],
+	[stems$1("promoc|rabat|zniżk|sale|wyprzeda|okazj|black friday"), "🔥"],
+	[stems$1("święt|christmas|mikołaj"), "🎄"],
+	[stems$1("walentyn|miłoś|love"), "❤️"],
+	[stems$1("otwarci|premier|nowość|nowy|nowa|launch"), "✨"]
 ];
 var STYLE_RULES = [
-	[stems("win[oa]|wine|elegan|luksus|luxury|hotel|ślub|wesel|wedding|biżuter|jewel|galeri|teatr|opera|premium|spa"), "elegant"],
-	[stems("dzieci|dziecię|kids|zabaw|urodzin|party|impre|festyn|lody|cukier|zwierz|pies|psa|kot|piknik|lato|summer"), "playful"],
-	[stems("techn|aplikac|softw|startup|konferenc|conference|design|architekt|meetup|webinar|kod|programow|\\bai\\b"), "minimal"]
+	[stems$1("win[oa]|wine|elegan|luksus|luxury|hotel|ślub|wesel|wedding|biżuter|jewel|galeri|teatr|opera|premium|spa"), "elegant"],
+	[stems$1("dzieci|dziecię|kids|zabaw|urodzin|party|impre|festyn|lody|cukier|zwierz|pies|psa|kot|piknik|lato|summer"), "playful"],
+	[stems$1("techn|aplikac|softw|startup|konferenc|conference|design|architekt|meetup|webinar|kod|programow|\\bai\\b"), "minimal"]
 ];
 var PALETTE_RULES = [
-	[stems("pizz|burger|jedzen|food|restaur|kuchni|grill|bbq|kebab"), "Pomidor"],
-	[stems("techn|konferenc|biznes|business|finans|prawn|startup|webinar|aplikac"), "Granat"],
-	[stems("eko|zdrow|jog[aię]|yoga|natur|ogród|ogrod|rośli|vegan|wegań|spa"), "Mięta"],
-	[stems("urod|beauty|kosmet|walentyn|kwiat|ciast|cukier|lody|tort"), "Róż"],
-	[stems("podróż|travel|wakac|morze|basen|żegl|rejs"), "Ocean"],
-	[stems("rower|bike|górsk|trekking|biwak|outdoor|las\\b"), "Las"],
-	[stems("kaw[aęyi]|kawiar|coffee|cafe|chleb|piekar|ceramik|rękodzieł|handmade|win[oa]|wine"), "Terakota"],
-	[stems("dzieci|kids|lato|summer|festyn|piknik|lemoniad"), "Cytryna"],
-	[stems("koncert|muzy|music|klub|noc|night|film|kino|gaming|dj"), "Grafit"],
-	[stems("elegan|galeri|książ|book|architekt|design|minimal"), "Papier"]
+	[stems$1("pizz|burger|jedzen|food|restaur|kuchni|grill|bbq|kebab"), "Pomidor"],
+	[stems$1("techn|konferenc|biznes|business|finans|prawn|startup|webinar|aplikac"), "Granat"],
+	[stems$1("eko|zdrow|jog[aię]|yoga|natur|ogród|ogrod|rośli|vegan|wegań|spa"), "Mięta"],
+	[stems$1("urod|beauty|kosmet|walentyn|kwiat|ciast|cukier|lody|tort"), "Róż"],
+	[stems$1("podróż|travel|wakac|morze|basen|żegl|rejs"), "Ocean"],
+	[stems$1("rower|bike|górsk|trekking|biwak|outdoor|las\\b"), "Las"],
+	[stems$1("kaw[aęyi]|kawiar|coffee|cafe|chleb|piekar|ceramik|rękodzieł|handmade|win[oa]|wine"), "Terakota"],
+	[stems$1("dzieci|kids|lato|summer|festyn|piknik|lemoniad"), "Cytryna"],
+	[stems$1("koncert|muzy|music|klub|noc|night|film|kino|gaming|dj"), "Grafit"],
+	[stems$1("elegan|galeri|książ|book|architekt|design|minimal"), "Papier"]
 ];
 function splitBrief(brief) {
 	return brief.replace(ABBREVIATIONS, (_m, lead, abbr) => `${lead}${abbr}.${GLUE}`).split(/\n+|(?<=[.!?])\s+|\s*[;|•]\s*|\s+[–—-]\s+|,\s+/u).map((part) => part.replaceAll(GLUE, " ").trim()).filter((part) => part.length > 0);
@@ -8437,13 +8441,15 @@ function pickPalette(brief) {
 }
 function makeTile(kind, text, size) {
 	const spec = KINDS[kind];
-	return {
+	const tile = {
 		id: newId(),
 		kind,
 		text,
 		size: size ?? spec.defaultSize,
 		tone: spec.defaultTone
 	};
+	if (kind === "image") tile.art = { seed: newArtSeed() };
+	return tile;
 }
 function designFromBrief(brief) {
 	const parsed = parse(brief);
@@ -8564,12 +8570,37 @@ var STYLE_IDS = [
 	"playful",
 	"minimal"
 ];
+/** Generative artwork styles for image tiles without a photo. */
+var ART_MOTIFS = [
+	"sunburst",
+	"waves",
+	"blobs",
+	"bauhaus",
+	"halftone",
+	"stripes",
+	"rings",
+	"arches",
+	"mesh",
+	"confetti",
+	"landscape",
+	"grid"
+];
 var IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$/i;
 function oneOf(values, value) {
 	return values.includes(value) ? value : void 0;
 }
 function isRecord(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+var ICON_NAME = /^[a-z0-9-]{1,40}$/;
+function sanitizeArt(raw) {
+	if (!isRecord(raw)) return void 0;
+	const art = { seed: typeof raw.seed === "number" && Number.isInteger(raw.seed) ? raw.seed >>> 0 : newArtSeed() };
+	const motif = oneOf(ART_MOTIFS, raw.motif);
+	if (motif) art.motif = motif;
+	if (raw.icon === null) art.icon = null;
+	else if (typeof raw.icon === "string" && ICON_NAME.test(raw.icon)) art.icon = raw.icon;
+	return art;
 }
 function sanitizeTile(raw) {
 	if (!isRecord(raw)) return null;
@@ -8578,13 +8609,15 @@ function sanitizeTile(raw) {
 	const spec = KINDS[kind];
 	const text = typeof raw.text === "string" ? raw.text.trim().slice(0, 280) : "";
 	const image = typeof raw.image === "string" && IMAGE_DATA_URL.test(raw.image) ? raw.image : void 0;
+	const art = kind === "image" ? sanitizeArt(raw.art) : void 0;
 	return {
 		id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : newId(),
 		kind,
 		text,
 		size: oneOf(TILE_SIZES, raw.size) ?? spec.defaultSize,
 		tone: oneOf(TILE_TONES, raw.tone) ?? spec.defaultTone,
-		...image ? { image } : {}
+		...image ? { image } : {},
+		...art ? { art } : {}
 	};
 }
 function sanitizePalette(raw, fallback = PALETTES[0]) {
@@ -8625,6 +8658,631 @@ function sanitizeDesign(raw) {
 /** File-name-safe slug: "W każdy piątek!" becomes "w-kazdy-piatek". */
 function slugify(text, fallback = "tilecast") {
 	return text.toLowerCase().replaceAll("ł", "l").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "") || fallback;
+}
+/** Icon name → the SVG elements inside Lucide's 24×24 viewBox. */
+var ICONS = Object.fromEntries(Object.entries(/* @__PURE__ */ Object.assign({
+	"/node_modules/lucide-static/icons/baby.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-baby\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5\" />\n  <path d=\"M15 12h.01\" />\n  <path d=\"M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1\" />\n  <path d=\"M9 12h.01\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/badge-percent.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-badge-percent\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\" />\n  <path d=\"m15 9-6 6\" />\n  <path d=\"M9 9h.01\" />\n  <path d=\"M15 15h.01\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/beer.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-beer\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M17 11h1a3 3 0 0 1 0 6h-1\" />\n  <path d=\"M9 12v6\" />\n  <path d=\"M13 12v6\" />\n  <path d=\"M14 7.5c-1 0-1.44.5-3 .5s-2-.5-3-.5-1.72.5-2.5.5a2.5 2.5 0 0 1 0-5c.78 0 1.57.5 2.5.5S9.44 2 11 2s2 1.5 3 1.5 1.72-.5 2.5-.5a2.5 2.5 0 0 1 0 5c-.78 0-1.5-.5-2.5-.5Z\" />\n  <path d=\"M5 8v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/bike.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-bike\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <circle cx=\"18.5\" cy=\"17.5\" r=\"3.5\" />\n  <circle cx=\"5.5\" cy=\"17.5\" r=\"3.5\" />\n  <circle cx=\"15\" cy=\"5\" r=\"1\" />\n  <path d=\"M12 17.5V14l-3-3 4-3 2 3h2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/book-open.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-book-open\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 5v16\" />\n  <path d=\"M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/bot.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-bot\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 8V4H8\" />\n  <rect width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" />\n  <path d=\"M2 14h2\" />\n  <path d=\"M20 14h2\" />\n  <path d=\"M15 13v2\" />\n  <path d=\"M9 13v2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/brush.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-brush\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m11 10 3 3\" />\n  <path d=\"M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z\" />\n  <path d=\"M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/cake-slice.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-cake-slice\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M16 13H3\" />\n  <path d=\"M16 17H3\" />\n  <path d=\"m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6\" />\n  <circle cx=\"9\" cy=\"7\" r=\"2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/cake.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-cake\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8\" />\n  <path d=\"M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1\" />\n  <path d=\"M2 21h20\" />\n  <path d=\"M7 8v3\" />\n  <path d=\"M12 8v3\" />\n  <path d=\"M17 8v3\" />\n  <path d=\"M7 4h.01\" />\n  <path d=\"M12 4h.01\" />\n  <path d=\"M17 4h.01\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/calendar.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-calendar\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M8 2v3\" />\n  <path d=\"M16 2v3\" />\n  <rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />\n  <path d=\"M3 9h18\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/camera.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-camera\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\" />\n  <circle cx=\"12\" cy=\"13\" r=\"3\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/car.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-car\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2\" />\n  <circle cx=\"7\" cy=\"17\" r=\"2\" />\n  <path d=\"M9 17h6\" />\n  <circle cx=\"17\" cy=\"17\" r=\"2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/cat.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-cat\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 5c.67 0 1.35.09 2 .26 1.78-2 5.03-2.84 6.42-2.26 1.4.58-.42 7-.42 7 .57 1.07 1 2.24 1 3.44C21 17.9 16.97 21 12 21s-9-3-9-7.56c0-1.25.5-2.4 1-3.44 0 0-1.89-6.42-.5-7 1.39-.58 4.72.23 6.5 2.23A9.04 9.04 0 0 1 12 5Z\" />\n  <path d=\"M8 14v.5\" />\n  <path d=\"M16 14v.5\" />\n  <path d=\"M11.25 16.25h1.5L12 17l-.75-.75Z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/chef-hat.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-chef-hat\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z\" />\n  <path d=\"M6 17h12\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/clapperboard.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-clapperboard\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m12.296 3.464 3.02 3.956\" />\n  <path d=\"M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z\" />\n  <path d=\"M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\" />\n  <path d=\"m6.18 5.276 3.1 3.899\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/code.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-code\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m16 18 6-6-6-6\" />\n  <path d=\"m8 6-6 6 6 6\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/coffee.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-coffee\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10 2v2\" />\n  <path d=\"M14 2v2\" />\n  <path d=\"M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1\" />\n  <path d=\"M6 2v2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/cpu.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-cpu\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 20v2\" />\n  <path d=\"M12 2v2\" />\n  <path d=\"M17 20v2\" />\n  <path d=\"M17 2v2\" />\n  <path d=\"M2 12h2\" />\n  <path d=\"M2 17h2\" />\n  <path d=\"M2 7h2\" />\n  <path d=\"M20 12h2\" />\n  <path d=\"M20 17h2\" />\n  <path d=\"M20 7h2\" />\n  <path d=\"M7 20v2\" />\n  <path d=\"M7 2v2\" />\n  <rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"2\" />\n  <rect x=\"8\" y=\"8\" width=\"8\" height=\"8\" rx=\"1\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/croissant.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-croissant\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10.2 18H4.774a1.5 1.5 0 0 1-1.352-.97 11 11 0 0 1 .132-6.487\" />\n  <path d=\"M18 10.2V4.774a1.5 1.5 0 0 0-.97-1.352 11 11 0 0 0-6.486.132\" />\n  <path d=\"M18 5a4 3 0 0 1 4 3 2 2 0 0 1-2 2 10 10 0 0 0-5.139 1.42\" />\n  <path d=\"M5 18a3 4 0 0 0 3 4 2 2 0 0 0 2-2 10 10 0 0 1 1.42-5.14\" />\n  <path d=\"M8.709 2.554a10 10 0 0 0-6.155 6.155 1.5 1.5 0 0 0 .676 1.626l9.807 5.42a2 2 0 0 0 2.718-2.718l-5.42-9.807a1.5 1.5 0 0 0-1.626-.676\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/dices.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-dices\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" />\n  <path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" />\n  <path d=\"M6 18h.01\" />\n  <path d=\"M10 14h.01\" />\n  <path d=\"M15 6h.01\" />\n  <path d=\"M18 9h.01\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/dog.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-dog\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11.25 16.25h1.5L12 17z\" />\n  <path d=\"M16 14v.5\" />\n  <path d=\"M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.702 11.702 0 0 0-.493-3.309\" />\n  <path d=\"M8 14v.5\" />\n  <path d=\"M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5-1.931.722-3.576-.297-3.656-1-.113-.994 1.177-6.53 4-7 1.923-.321 3.651.845 3.651 2.235A7.497 7.497 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/drum.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-drum\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m2 2 8 8\" />\n  <path d=\"m22 2-8 8\" />\n  <ellipse cx=\"12\" cy=\"9\" rx=\"10\" ry=\"5\" />\n  <path d=\"M7 13.4v7.9\" />\n  <path d=\"M12 14v8\" />\n  <path d=\"M17 13.4v7.9\" />\n  <path d=\"M2 9v8a10 5 0 0 0 20 0V9\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/dumbbell.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-dumbbell\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z\" />\n  <path d=\"m2.5 21.5 1.4-1.4\" />\n  <path d=\"m20.1 3.9 1.4-1.4\" />\n  <path d=\"M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z\" />\n  <path d=\"m9.6 14.4 4.8-4.8\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/film.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-film\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" />\n  <path d=\"M7 3v18\" />\n  <path d=\"M3 7.5h4\" />\n  <path d=\"M3 12h18\" />\n  <path d=\"M3 16.5h4\" />\n  <path d=\"M17 3v18\" />\n  <path d=\"M17 7.5h4\" />\n  <path d=\"M17 16.5h4\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/flower-2.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-flower-2\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 5a3 3 0 1 1 3 3m-3-3a3 3 0 1 0-3 3m3-3v1M9 8a3 3 0 1 0 3 3M9 8h1m5 0a3 3 0 1 1-3 3m3-3h-1m-2 3v-1\" />\n  <circle cx=\"12\" cy=\"8\" r=\"2\" />\n  <path d=\"M12 10v12\" />\n  <path d=\"M12 22c4.2 0 7-1.667 7-5-4.2 0-7 1.667-7 5Z\" />\n  <path d=\"M12 22c-4.2 0-7-1.667-7-5 4.2 0 7 1.667 7 5Z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/flower.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-flower\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <circle cx=\"12\" cy=\"12\" r=\"3\" />\n  <path d=\"M12 16.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 1 1 4.5 4.5 4.5 4.5 0 1 1-4.5 4.5\" />\n  <path d=\"M12 7.5V9\" />\n  <path d=\"M7.5 12H9\" />\n  <path d=\"M16.5 12H15\" />\n  <path d=\"M12 16.5V15\" />\n  <path d=\"m8 8 1.88 1.88\" />\n  <path d=\"M14.12 9.88 16 8\" />\n  <path d=\"m8 16 1.88-1.88\" />\n  <path d=\"M14.12 14.12 16 16\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/gamepad-2.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-gamepad-2\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <line x1=\"6\" x2=\"10\" y1=\"11\" y2=\"11\" />\n  <line x1=\"8\" x2=\"8\" y1=\"9\" y2=\"13\" />\n  <line x1=\"15\" x2=\"15.01\" y1=\"12\" y2=\"12\" />\n  <line x1=\"18\" x2=\"18.01\" y1=\"10\" y2=\"10\" />\n  <path d=\"M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/gem.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-gem\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10.5 3 8 9l4 13 4-13-2.5-6\" />\n  <path d=\"M17 3a2 2 0 0 1 1.6.8l3 4a2 2 0 0 1 .013 2.382l-7.99 10.986a2 2 0 0 1-3.247 0l-7.99-10.986A2 2 0 0 1 2.4 7.8l2.998-3.997A2 2 0 0 1 7 3z\" />\n  <path d=\"M2 9h20\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/gift.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-gift\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 7v14\" />\n  <path d=\"M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8\" />\n  <path d=\"M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5\" />\n  <rect x=\"3\" y=\"7\" width=\"18\" height=\"4\" rx=\"1\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/graduation-cap.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-graduation-cap\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" />\n  <path d=\"M22 10v6\" />\n  <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/guitar.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-guitar\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m11.9 12.1 4.514-4.514\" />\n  <path d=\"M20.1 2.3a1 1 0 0 0-1.4 0l-1.114 1.114A2 2 0 0 0 17 4.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 17.828 7h1.344a2 2 0 0 0 1.414-.586L21.7 5.3a1 1 0 0 0 0-1.4z\" />\n  <path d=\"m6 16 2 2\" />\n  <path d=\"M8.23 9.85A3 3 0 0 1 11 8a5 5 0 0 1 5 5 3 3 0 0 1-1.85 2.77l-.92.38A2 2 0 0 0 12 18a4 4 0 0 1-4 4 6 6 0 0 1-6-6 4 4 0 0 1 4-4 2 2 0 0 0 1.85-1.23z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/hamburger.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-hamburger\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 16H4a2 2 0 1 1 0-4h16a2 2 0 1 1 0 4h-4.25\" />\n  <path d=\"M5 12a2 2 0 0 1-2-2 9 7 0 0 1 18 0 2 2 0 0 1-2 2\" />\n  <path d=\"M5 16a2 2 0 0 0-2 2 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 2 2 0 0 0-2-2q0 0 0 0\" />\n  <path d=\"m6.67 12 6.13 4.6a2 2 0 0 0 2.8-.4l3.15-4.2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/headphones.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-headphones\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/heart-pulse.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-heart-pulse\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5\" />\n  <path d=\"M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/heart.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-heart\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/house.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-house\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\" />\n  <path d=\"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/ice-cream-cone.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-ice-cream-cone\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m7 11 4.08 10.35a1 1 0 0 0 1.84 0L17 11\" />\n  <path d=\"M17 7A5 5 0 0 0 7 7\" />\n  <path d=\"M17 7a2 2 0 0 1 0 4H7a2 2 0 0 1 0-4\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/key.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-key\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m2 21 9.6-9.6\" />\n  <path d=\"m7.5 15.5 2.3 2.3a1 1 0 0 1 0 1.4l-2.1 2.1a1 1 0 0 1-1.4 0L4 19\" />\n  <circle cx=\"15.5\" cy=\"7.5\" r=\"5.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/laptop.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-laptop\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z\" />\n  <path d=\"M20.054 15.987H3.946\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/leaf.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-leaf\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20\" />\n  <path d=\"M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/library.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-library\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m16 6 4 14\" />\n  <path d=\"M12 6v14\" />\n  <path d=\"M8 8v12\" />\n  <path d=\"M4 4v16\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/luggage.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-luggage\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M6 20a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2\" />\n  <path d=\"M8 18V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v14\" />\n  <path d=\"M10 20h4\" />\n  <circle cx=\"16\" cy=\"20\" r=\"2\" />\n  <circle cx=\"8\" cy=\"20\" r=\"2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/map.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-map\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\" />\n  <path d=\"M15 5.764v15\" />\n  <path d=\"M9 3.236v15\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/martini.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-martini\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 12 4.207 4.207A.707.707 0 0 1 4.707 3h14.586a.707.707 0 0 1 .5 1.207z\" />\n  <path d=\"M12 12v10\" />\n  <path d=\"M7 22h10\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/medal.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-medal\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15\" />\n  <path d=\"M11 12 5.12 2.2\" />\n  <path d=\"m13 12 5.88-9.8\" />\n  <path d=\"M8 7h8\" />\n  <circle cx=\"12\" cy=\"17\" r=\"5\" />\n  <path d=\"M12 18v-2h-.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/megaphone.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-megaphone\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z\" />\n  <path d=\"M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14\" />\n  <path d=\"M8 6v8\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/mic-vocal.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-mic-vocal\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12\" />\n  <path d=\"M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5\" />\n  <circle cx=\"16\" cy=\"7\" r=\"5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/mountain.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-mountain\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m8 3 4 8 5-5 5 15H2L8 3z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/music.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-music\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M9 18V5l12-2v13\" />\n  <circle cx=\"6\" cy=\"18\" r=\"3\" />\n  <circle cx=\"18\" cy=\"16\" r=\"3\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/palette.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-palette\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z\" />\n  <circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" />\n  <circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" />\n  <circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" />\n  <circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/party-popper.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-party-popper\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M5.8 11.3 2 22l10.7-3.79\" />\n  <path d=\"M4 3h.01\" />\n  <path d=\"M22 8h.01\" />\n  <path d=\"M15 2h.01\" />\n  <path d=\"M22 20h.01\" />\n  <path d=\"m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10\" />\n  <path d=\"m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17\" />\n  <path d=\"m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7\" />\n  <path d=\"M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/paw-print.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-paw-print\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <circle cx=\"11\" cy=\"4\" r=\"2\" />\n  <circle cx=\"18\" cy=\"8\" r=\"2\" />\n  <circle cx=\"20\" cy=\"16\" r=\"2\" />\n  <path d=\"M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/pencil.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-pencil\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\" />\n  <path d=\"m15 5 4 4\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/percent.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-percent\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <line x1=\"19\" x2=\"5\" y1=\"5\" y2=\"19\" />\n  <circle cx=\"6.5\" cy=\"6.5\" r=\"2.5\" />\n  <circle cx=\"17.5\" cy=\"17.5\" r=\"2.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/piano.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-piano\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10 13v4\" />\n  <path d=\"M14 13v4\" />\n  <path d=\"M18 13v4\" />\n  <path d=\"M2 13h20\" />\n  <path d=\"M22 11.5A3.5 3.5 0 0018.5 8a3.52 3.52 0 01-3.173-2A7 7 0 002 9v10a2 2 0 002 2h16a2 2 0 002-2z\" />\n  <path d=\"M6 13v4\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/pizza.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-pizza\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m12 14-1 1\" />\n  <path d=\"m13.75 18.25-1.25 1.42\" />\n  <path d=\"M17.775 5.654a15.68 15.68 0 0 0-12.121 12.12\" />\n  <path d=\"M18.8 9.3a1 1 0 0 0 2.1 7.7\" />\n  <path d=\"M21.964 20.732a1 1 0 0 1-1.232 1.232l-18-5a1 1 0 0 1-.695-1.232A19.68 19.68 0 0 1 15.732 2.037a1 1 0 0 1 1.232.695z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/plane.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-plane\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/popcorn.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-popcorn\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M18 8a2 2 0 0 0 0-4 2 2 0 0 0-4 0 2 2 0 0 0-4 0 2 2 0 0 0-4 0 2 2 0 0 0 0 4\" />\n  <path d=\"M10 22 9 8\" />\n  <path d=\"m14 22 1-14\" />\n  <path d=\"M20 8c.5 0 .9.4.8 1l-2.6 12c-.1.5-.7 1-1.2 1H7c-.6 0-1.1-.4-1.2-1L3.2 9c-.1-.6.3-1 .8-1Z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/puzzle.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-puzzle\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/rocket.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-rocket\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5\" />\n  <path d=\"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09\" />\n  <path d=\"M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z\" />\n  <path d=\"M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/sailboat.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-sailboat\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10 2v15\" />\n  <path d=\"M7 22a4 4 0 0 1-4-4 1 1 0 0 1 1-1h16a1 1 0 0 1 1 1 4 4 0 0 1-4 4z\" />\n  <path d=\"M9.159 2.46a1 1 0 0 1 1.521-.193l9.977 8.98A1 1 0 0 1 20 13H4a1 1 0 0 1-.824-1.567z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/school.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-school\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M14 21v-3a2 2 0 0 0-4 0v3\" />\n  <path d=\"M18 4.933V21\" />\n  <path d=\"m4 6 7.106-3.79a2 2 0 0 1 1.788 0L20 6\" />\n  <path d=\"m6 11-3.52 2.147a1 1 0 0 0-.48.854V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a1 1 0 0 0-.48-.853L18 11\" />\n  <path d=\"M6 4.933V21\" />\n  <circle cx=\"12\" cy=\"9\" r=\"2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/scissors.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-scissors\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <circle cx=\"6\" cy=\"6\" r=\"3\" />\n  <path d=\"M8.12 8.12 12 12\" />\n  <path d=\"M20 4 8.12 15.88\" />\n  <circle cx=\"6\" cy=\"18\" r=\"3\" />\n  <path d=\"M14.8 14.8 20 20\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/shopping-bag.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-shopping-bag\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M16 10a4 4 0 0 1-8 0\" />\n  <path d=\"M3.103 6.034h17.794\" />\n  <path d=\"M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/snowflake.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-snowflake\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m10 20-1.25-2.5L6 18\" />\n  <path d=\"M10 4 8.75 6.5 6 6\" />\n  <path d=\"m14 20 1.25-2.5L18 18\" />\n  <path d=\"m14 4 1.25 2.5L18 6\" />\n  <path d=\"m17 21-3-6h-4\" />\n  <path d=\"m17 3-3 6 1.5 3\" />\n  <path d=\"M2 12h6.5L10 9\" />\n  <path d=\"m20 10-1.5 2 1.5 2\" />\n  <path d=\"M22 12h-6.5L14 15\" />\n  <path d=\"m4 10 1.5 2L4 14\" />\n  <path d=\"m7 21 3-6-1.5-3\" />\n  <path d=\"m7 3 3 6h4\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/soup.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-soup\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z\" />\n  <path d=\"M7 21h10\" />\n  <path d=\"M19.5 12 22 6\" />\n  <path d=\"M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62\" />\n  <path d=\"M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62\" />\n  <path d=\"M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/sparkles.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-sparkles\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z\" />\n  <path d=\"M20 2v4\" />\n  <path d=\"M22 4h-4\" />\n  <circle cx=\"4\" cy=\"20\" r=\"2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/sprout.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-sprout\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3\" />\n  <path d=\"M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4\" />\n  <path d=\"M5 21h14\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/star.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-star\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/stethoscope.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-stethoscope\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11 2v2\" />\n  <path d=\"M5 2v2\" />\n  <path d=\"M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1\" />\n  <path d=\"M8 15a6 6 0 0 0 12 0v-3\" />\n  <circle cx=\"20\" cy=\"10\" r=\"2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/store.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-store\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\" />\n  <path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\" />\n  <path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/sun.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-sun\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <circle cx=\"12\" cy=\"12\" r=\"4\" />\n  <path d=\"M12 2v2\" />\n  <path d=\"M12 20v2\" />\n  <path d=\"m4.93 4.93 1.41 1.41\" />\n  <path d=\"m17.66 17.66 1.41 1.41\" />\n  <path d=\"M2 12h2\" />\n  <path d=\"M20 12h2\" />\n  <path d=\"m6.34 17.66-1.41 1.41\" />\n  <path d=\"m19.07 4.93-1.41 1.41\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/tag.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-tag\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" />\n  <circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/tent.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-tent\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3.5 21 14 3\" />\n  <path d=\"M20.5 21 10 3\" />\n  <path d=\"M15.5 21 12 15l-3.5 6\" />\n  <path d=\"M2 21h20\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/ticket.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-ticket\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\" />\n  <path d=\"M13 5v2\" />\n  <path d=\"M13 17v2\" />\n  <path d=\"M13 11v2\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/tree-palm.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-tree-palm\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4\" />\n  <path d=\"M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3\" />\n  <path d=\"M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35\" />\n  <path d=\"M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/tree-pine.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-tree-pine\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7H17Z\" />\n  <path d=\"M12 22v-3\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/trees.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-trees\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z\" />\n  <path d=\"M7 16v6\" />\n  <path d=\"M13 19v3\" />\n  <path d=\"M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/trophy.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-trophy\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2\" />\n  <path d=\"M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2\" />\n  <path d=\"M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3\" />\n  <path d=\"M4 22h16\" />\n  <path d=\"M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z\" />\n  <path d=\"M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/utensils.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-utensils\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\" />\n  <path d=\"M7 2v20\" />\n  <path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/volleyball.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-volleyball\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M11 7a16 16 20 0 1 10.98 4.362\" />\n  <path d=\"M12 12a13 13 0 0 1-8.66 5\" />\n  <path d=\"M16.83 13.634a16 16 0 0 1-9.267 7.328\" />\n  <path d=\"M20.66 17A13 13 0 0 0 12 12a13 13 0 0 1 0-10\" />\n  <path d=\"M8.17 15.366a16 16 0 0 1-1.713-11.69\" />\n  <circle cx=\"12\" cy=\"12\" r=\"10\" />\n</svg>\n",
+	"/node_modules/lucide-static/icons/wine.svg": "<!-- @license lucide-static v1.48.0 - ISC -->\n<svg\n  class=\"lucide lucide-wine\"\n  xmlns=\"http://www.w3.org/2000/svg\"\n  width=\"24\"\n  height=\"24\"\n  viewBox=\"0 0 24 24\"\n  fill=\"none\"\n  stroke=\"currentColor\"\n  stroke-width=\"2\"\n  stroke-linecap=\"round\"\n  stroke-linejoin=\"round\"\n>\n  <path d=\"M8 22h8\" />\n  <path d=\"M7 10h10\" />\n  <path d=\"M12 15v7\" />\n  <path d=\"M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z\" />\n</svg>\n"
+})).map(([file, svg]) => [file.slice(file.lastIndexOf("/") + 1, -4), svg.replace(/<!--[\s\S]*?-->/g, "").replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>[\s\S]*$/, "").replace(/\s+/g, " ").trim()]));
+var ICON_NAMES = Object.keys(ICONS).sort();
+var L = "(?<![\\p{L}\\p{N}])";
+var stems = (list) => new RegExp(`${L}(?:${list})`, "iu");
+/** Topics recognised in the design's copy, most specific first, with fitting icons. */
+var TOPICS = [
+	[stems("pizz"), ["pizza"]],
+	[stems("burger|hamburg"), ["hamburger"]],
+	[stems("kaw[aęyi]|kawiar|coffee|cafe|café|espresso|latte"), ["coffee", "croissant"]],
+	[stems("ciast|tort|cake|cukier|deser|pączk|piekar|bakery"), ["cake-slice", "croissant"]],
+	[stems("lody|lodów|ice cream|gelato"), ["ice-cream-cone"]],
+	[stems("win[oa]|wine|winiar|degustac"), ["wine"]],
+	[stems("piw|beer|browar"), ["beer"]],
+	[stems("koktajl|cocktail|drink"), ["martini"]],
+	[stems("restaur|kuchni|obiad|kolacj|jedzeni|food|dinner|lunch|bistro|grill|bbq"), [
+		"utensils",
+		"chef-hat",
+		"soup"
+	]],
+	[stems("jazz|koncert|muzy|music|festiwal|festival|dj|gig(?![\\p{L}])|zespo|band(?![\\p{L}])|płyt|rock(?![\\p{L}])|disco|orkiestr|filharmoni"), [
+		"music",
+		"guitar",
+		"mic-vocal",
+		"headphones",
+		"piano",
+		"drum"
+	]],
+	[stems("impre|party|urodzin|birthday|zabaw|sylwest"), [
+		"party-popper",
+		"cake",
+		"gift"
+	]],
+	[stems("trening|siłowni|fitness|gym|biegani|maraton|sport|mecz|turniej|zawod|match|run"), [
+		"dumbbell",
+		"trophy",
+		"medal",
+		"volleyball"
+	]],
+	[stems("rower|bike|cycling"), ["bike"]],
+	[stems("jog[aię]|yoga|medyt|wellness|spa(?![\\p{L}])"), [
+		"flower-2",
+		"sparkles",
+		"leaf"
+	]],
+	[stems("książ|book|czyta|bibliot|library|literat"), ["book-open", "library"]],
+	[stems("kurs|szkoleni|warsztat|lekcj|course|workshop|webinar|szkoł|school|studi|nauk"), [
+		"graduation-cap",
+		"pencil",
+		"school",
+		"book-open"
+	]],
+	[stems("kwiat|flower|ogród|ogrod|garden|rośli|plant"), [
+		"flower",
+		"sprout",
+		"leaf"
+	]],
+	[stems("eko|recykl|natur|las(?![\\p{L}])|lasu|lesie|forest|drzew"), [
+		"trees",
+		"leaf",
+		"sprout"
+	]],
+	[stems("gór|mountain|trekking|wędrów|hik|biwak|camp"), [
+		"mountain",
+		"tent",
+		"trees"
+	]],
+	[stems("pies(?![\\p{L}])|piesk|psa|psy|psów|dogs?(?![\\p{L}])|kot(?![\\p{L}])|kota|koty|kotów|kotk|cats?(?![\\p{L}])|zwierz|pets?(?![\\p{L}])|schronisk"), [
+		"paw-print",
+		"dog",
+		"cat"
+	]],
+	[stems("kino|film|movie|cinema|seans"), [
+		"clapperboard",
+		"film",
+		"popcorn"
+	]],
+	[stems("gaming|gier|game|planszów"), [
+		"gamepad-2",
+		"dices",
+		"puzzle"
+	]],
+	[stems("podróż|wakacj|travel|urlop|wycieczk|trip|flight"), [
+		"plane",
+		"luggage",
+		"tree-palm",
+		"map"
+	]],
+	[stems("morze|morsk|rejs|żegl|sail|boat|plaż|beach"), [
+		"sailboat",
+		"sun",
+		"tree-palm"
+	]],
+	[stems("promoc|rabat|zniżk|sale(?![\\p{L}])|wyprzeda|okazj|black friday|discount"), [
+		"badge-percent",
+		"tag",
+		"shopping-bag",
+		"percent"
+	]],
+	[stems("sklep|shop|store|zakup|kolekcj|moda|fashion"), [
+		"shopping-bag",
+		"store",
+		"tag"
+	]],
+	[stems("techn|aplikac|softw|startup|kod|programow|developer|hackathon|ai(?![\\p{L}])"), [
+		"rocket",
+		"code",
+		"laptop",
+		"cpu",
+		"bot"
+	]],
+	[stems("święt|christmas|mikołaj|choink|zim[aąy]|winter"), [
+		"tree-pine",
+		"snowflake",
+		"gift"
+	]],
+	[stems("walentyn|miłoś|love|ślub|wesel|wedding"), ["heart", "gem"]],
+	[stems("fryzj|beauty|urod|kosmet|makijaż|paznok|barber"), [
+		"scissors",
+		"sparkles",
+		"gem"
+	]],
+	[stems("zdrow|lekarz|klinik|health|dent|przychodni"), ["stethoscope", "heart-pulse"]],
+	[stems("mieszka|nieruchom|apartament|real estate|house"), ["house", "key"]],
+	[stems("samoch|motoryz|car(?![\\p{L}])"), ["car"]],
+	[stems("wystaw|galeri|sztuk|malar|exhibit|muze|art(?![\\p{L}])"), [
+		"palette",
+		"brush",
+		"gem"
+	]],
+	[stems("fotograf|photo"), ["camera"]],
+	[stems("dzieci|dziecię|kids|child|rodzin|family|przedszk"), [
+		"baby",
+		"puzzle",
+		"party-popper"
+	]],
+	[stems("konferenc|conference|meetup|spotkani|event|wydarzen|premier|launch|otwar|opening"), [
+		"megaphone",
+		"calendar",
+		"star",
+		"sparkles"
+	]]
+];
+/** An icon that fits what the copy is about, varied by `seed`; null when no topic is recognised. */
+function topicIcon(text, seed) {
+	for (const [re, icons] of TOPICS) if (re.test(text)) return icons[Math.abs(seed) % icons.length];
+	return null;
+}
+//#endregion
+//#region src/render/artwork.ts
+/**
+* Generative artwork for image tiles without a photo. Every tile carries its
+* own random seed, so each design gets a different picture: the motif, shapes,
+* composition and colors all vary, drawn from the design's palette. The same
+* seed is recomposed for each format's proportions, so a campaign stays
+* consistent across poster, post, story and banner.
+*/
+var MOTIF_POOLS = {
+	bold: [
+		"bauhaus",
+		"stripes",
+		"sunburst",
+		"halftone",
+		"waves",
+		"arches",
+		"blobs"
+	],
+	elegant: [
+		"arches",
+		"rings",
+		"mesh",
+		"landscape",
+		"waves",
+		"grid"
+	],
+	playful: [
+		"blobs",
+		"confetti",
+		"waves",
+		"arches",
+		"bauhaus",
+		"sunburst"
+	],
+	minimal: [
+		"grid",
+		"rings",
+		"mesh",
+		"halftone",
+		"bauhaus",
+		"landscape",
+		"stripes"
+	]
+};
+function random(seed) {
+	let state = seed >>> 0 || 2654435769;
+	return () => {
+		state = state + 1831565813 | 0;
+		let t = Math.imul(state ^ state >>> 15, 1 | state);
+		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+		return ((t ^ t >>> 14) >>> 0) / 4294967296;
+	};
+}
+var n = (value) => Math.round(value * 10) / 10;
+function pickMotif(style, seed, motif) {
+	if (motif) return motif;
+	const pool = MOTIF_POOLS[style];
+	return pool[Math.abs(seed) % pool.length];
+}
+function colorsFor({ base, ink, palette }) {
+	const pop = [
+		palette.accent,
+		palette.bg,
+		palette.surface,
+		palette.accentInk,
+		palette.ink
+	].find((c) => contrast(c, base) > 1.35 && contrast(c, ink) > 1.35) ?? mix(base, ink, .45);
+	return {
+		base,
+		soft: mix(base, ink, .1),
+		mid: mix(base, ink, .26),
+		deep: mix(base, ink, .62),
+		pop,
+		light: mix(pop, base, .45)
+	};
+}
+/** Smooth closed path through points (Catmull-Rom converted to cubic Béziers). */
+function smoothClosed(points) {
+	const count = points.length;
+	let d = `M${n(points[0][0])} ${n(points[0][1])}`;
+	for (let i = 0; i < count; i++) {
+		const [p0, p1, p2, p3] = [
+			points[(i - 1 + count) % count],
+			points[i],
+			points[(i + 1) % count],
+			points[(i + 2) % count]
+		];
+		const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+		const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+		d += ` C${n(c1[0])} ${n(c1[1])} ${n(c2[0])} ${n(c2[1])} ${n(p2[0])} ${n(p2[1])}`;
+	}
+	return `${d}Z`;
+}
+function shuffle(items, r) {
+	const copy = [...items];
+	for (let i = copy.length - 1; i > 0; i--) {
+		const j = Math.floor(r() * (i + 1));
+		[copy[i], copy[j]] = [copy[j], copy[i]];
+	}
+	return copy;
+}
+var MOTIFS = {
+	sunburst(w, h, c, r) {
+		const cx = w * [
+			.5,
+			.25,
+			.75
+		][Math.floor(r() * 3)];
+		const cy = r() < .6 ? h * 1.02 : h * -.02;
+		const rays = 10 + Math.floor(r() * 12);
+		const reach = Math.hypot(w, h) * 1.4;
+		const turn = r() * Math.PI;
+		let out = "";
+		for (let i = 0; i < rays; i += 2) {
+			const a0 = turn + i / rays * Math.PI * 2;
+			const a1 = turn + (i + 1) / rays * Math.PI * 2;
+			out += `<path d="M${n(cx)} ${n(cy)}L${n(cx + Math.cos(a0) * reach)} ${n(cy + Math.sin(a0) * reach)}L${n(cx + Math.cos(a1) * reach)} ${n(cy + Math.sin(a1) * reach)}Z" fill="${c.soft}"/>`;
+		}
+		const sun = Math.min(w, h) * (.2 + r() * .12);
+		out += `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(sun * 1.35)}" fill="${c.light}"/>`;
+		out += `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(sun)}" fill="${c.pop}"/>`;
+		return out;
+	},
+	waves(w, h, c, r, style) {
+		const bands = 4 + Math.floor(r() * 4);
+		const colors = shuffle([
+			c.soft,
+			c.mid,
+			c.pop,
+			c.deep,
+			c.light
+		], r);
+		const thin = style === "elegant";
+		let out = "";
+		for (let k = 0; k < bands; k++) {
+			const y0 = h * (.12 + k / bands * .88);
+			const amp = h * (.03 + r() * .06);
+			const freq = (1 + r() * 2.5) * Math.PI * 2 / w;
+			const phase = r() * Math.PI * 2;
+			let d = `M0 ${n(y0)}`;
+			for (let x = 0; x <= w + 1; x += w / 32) d += ` L${n(x)} ${n(y0 + Math.sin(x * freq + phase) * amp)}`;
+			out += thin ? `<path d="${d}" fill="none" stroke="${c.deep}" stroke-width="${n(Math.min(w, h) * .006)}"/>` : `<path d="${d} L${n(w)} ${n(h)} L0 ${n(h)}Z" fill="${colors[k % colors.length]}"/>`;
+		}
+		return out;
+	},
+	blobs(w, h, c, r) {
+		const colors = shuffle([
+			c.soft,
+			c.mid,
+			c.pop,
+			c.light
+		], r);
+		let out = "";
+		const count = 3 + Math.floor(r() * 2);
+		for (let b = 0; b < count; b++) {
+			const cx = w * (.15 + r() * .7);
+			const cy = h * (.15 + r() * .7);
+			const radius = Math.min(w, h) * (.22 + r() * .2);
+			const points = [];
+			for (let i = 0; i < 8; i++) {
+				const angle = i / 8 * Math.PI * 2;
+				const rr = radius * (.72 + r() * .5);
+				points.push([cx + Math.cos(angle) * rr, cy + Math.sin(angle) * rr]);
+			}
+			out += `<path d="${smoothClosed(points)}" fill="${colors[b % colors.length]}"/>`;
+		}
+		for (let i = 0; i < 9; i++) out += `<circle cx="${n(r() * w)}" cy="${n(r() * h)}" r="${n(Math.min(w, h) * (.01 + r() * .02))}" fill="${c.deep}"/>`;
+		return out;
+	},
+	bauhaus(w, h, c, r) {
+		const cols = w / h > 1.3 ? 3 : 2;
+		const rows = Math.max(1, Math.min(4, Math.round(cols * h / w)));
+		const cw = w / cols;
+		const ch = h / rows;
+		const fills = [
+			c.base,
+			c.soft,
+			c.pop,
+			c.deep,
+			c.mid
+		];
+		let out = "";
+		for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) {
+			const x = col * cw;
+			const y = row * ch;
+			const bg = fills[Math.floor(r() * fills.length)];
+			const choices = fills.filter((f) => f !== bg);
+			const fg = choices[Math.floor(r() * choices.length)];
+			const m = Math.min(cw, ch);
+			let cell = `<rect x="${n(x)}" y="${n(y)}" width="${n(cw)}" height="${n(ch)}" fill="${bg}"/>`;
+			const shape = Math.floor(r() * 5);
+			if (shape === 0) {
+				const corner = Math.floor(r() * 4);
+				const px = corner % 2 ? x + cw : x;
+				const py = corner > 1 ? y + ch : y;
+				cell += `<circle cx="${n(px)}" cy="${n(py)}" r="${n(m)}" fill="${fg}"/>`;
+			} else if (shape === 1) cell += `<circle cx="${n(x + cw / 2)}" cy="${n(y + ch / 2)}" r="${n(m * .38)}" fill="${fg}"/>`;
+			else if (shape === 2) cell += `<path d="M${n(x)} ${n(y + ch)} A${n(cw / 2)} ${n(cw / 2)} 0 0 1 ${n(x + cw)} ${n(y + ch)}Z" fill="${fg}"/>`;
+			else if (shape === 3) cell += `<path d="M${n(x)} ${n(y + ch)} L${n(x + cw / 2)} ${n(y + ch * .12)} L${n(x + cw)} ${n(y + ch)}Z" fill="${fg}"/>`;
+			else for (let s = 0; s < 3; s++) cell += `<rect x="${n(x + cw * .12)}" y="${n(y + ch * (.2 + s * .24))}" width="${n(cw * .76)}" height="${n(ch * .1)}" fill="${fg}"/>`;
+			const id = `b${row}-${col}`;
+			out += `<clipPath id="${id}"><rect x="${n(x)}" y="${n(y)}" width="${n(cw + .5)}" height="${n(ch + .5)}"/></clipPath><g clip-path="url(#${id})">${cell}</g>`;
+		}
+		return out;
+	},
+	halftone(w, h, c, r) {
+		const step = Math.min(w, h) / (11 + Math.floor(r() * 6));
+		const angle = r() * Math.PI * 2;
+		const [dx, dy] = [Math.cos(angle), Math.sin(angle)];
+		const big = Math.min(w, h) * (.3 + r() * .15);
+		let out = `<circle cx="${n(w * (.25 + r() * .5))}" cy="${n(h * (.25 + r() * .5))}" r="${n(big)}" fill="${c.pop}"/>`;
+		const span = Math.abs(dx) * w + Math.abs(dy) * h;
+		for (let y = step / 2; y < h; y += step) for (let x = step / 2; x < w; x += step) {
+			const t = ((x - w / 2) * dx + (y - h / 2) * dy) / span + .5;
+			const radius = step / 2 * Math.max(0, Math.min(1, t)) * .95;
+			if (radius > .4) out += `<circle cx="${n(x)}" cy="${n(y)}" r="${n(radius)}" fill="${c.deep}"/>`;
+		}
+		return out;
+	},
+	stripes(w, h, c, r) {
+		const angle = [
+			-35,
+			-20,
+			20,
+			35,
+			55
+		][Math.floor(r() * 5)];
+		const size = Math.hypot(w, h);
+		const colors = shuffle([
+			c.soft,
+			c.mid,
+			c.pop,
+			c.deep
+		], r);
+		let out = "";
+		let y = -size / 2;
+		let i = 0;
+		while (y < size / 2) {
+			const band = size * (.03 + r() * .07);
+			if (i % 2 === 0) out += `<rect x="${n(-size / 2)}" y="${n(y)}" width="${n(size)}" height="${n(band)}" fill="${colors[i / 2 % colors.length]}"/>`;
+			y += band;
+			i++;
+		}
+		return `<g transform="translate(${n(w / 2)} ${n(h / 2)}) rotate(${angle})">${out}</g>`;
+	},
+	rings(w, h, c, r, style) {
+		const cx = w * (.3 + r() * .4);
+		const cy = h * (.3 + r() * .4);
+		const count = 6 + Math.floor(r() * 6);
+		const gap = Math.max(w, h) / count / 1.4;
+		const stroke = style === "elegant" ? Math.min(w, h) * .005 : gap * (.18 + r() * .25);
+		let out = `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(gap * 1.1)}" fill="${c.pop}"/>`;
+		for (let i = 2; i <= count + 2; i++) out += `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(gap * i)}" fill="none" stroke="${i % 3 === 0 ? c.deep : c.mid}" stroke-width="${n(stroke)}"/>`;
+		return out;
+	},
+	arches(w, h, c, r, style) {
+		const cx = w * [
+			.5,
+			.3,
+			.7
+		][Math.floor(r() * 3)];
+		const outer = Math.min(w * .62, h * .9);
+		const bands = 4 + Math.floor(r() * 3);
+		const width = outer / (bands + 1);
+		const colors = shuffle([
+			c.pop,
+			c.deep,
+			c.mid,
+			c.light,
+			c.soft
+		], r);
+		let out = "";
+		for (let i = 0; i < bands; i++) {
+			const radius = outer - i * width;
+			const d = `M${n(cx - radius)} ${n(h)} V${n(h - radius * .35)} A${n(radius)} ${n(radius)} 0 0 1 ${n(cx + radius)} ${n(h - radius * .35)} V${n(h)}Z`;
+			out += style === "elegant" ? `<path d="${d}" fill="none" stroke="${c.deep}" stroke-width="${n(Math.min(w, h) * .005)}"/>` : `<path d="${d}" fill="${colors[i % colors.length]}"/>`;
+		}
+		const sun = width * (.8 + r() * .6);
+		out += `<circle cx="${n(w * (.15 + r() * .7))}" cy="${n(h * (.12 + r() * .2))}" r="${n(sun)}" fill="${c.pop}"/>`;
+		return out;
+	},
+	mesh(w, h, c, r) {
+		const colors = [
+			c.pop,
+			c.deep,
+			c.light,
+			c.mid
+		];
+		let defs = "";
+		let out = "";
+		for (let i = 0; i < 4; i++) {
+			defs += `<radialGradient id="m${i}"><stop offset="0" stop-color="${colors[i]}" stop-opacity="0.95"/><stop offset="1" stop-color="${colors[i]}" stop-opacity="0"/></radialGradient>`;
+			const radius = Math.max(w, h) * (.45 + r() * .35);
+			out += `<circle cx="${n(r() * w)}" cy="${n(r() * h)}" r="${n(radius)}" fill="url(#m${i})"/>`;
+		}
+		return `<defs>${defs}</defs>${out}`;
+	},
+	confetti(w, h, c, r) {
+		const colors = [
+			c.pop,
+			c.deep,
+			c.mid,
+			c.light
+		];
+		const unit = Math.min(w, h);
+		let out = "";
+		const count = 34 + Math.floor(r() * 24);
+		for (let i = 0; i < count; i++) {
+			const x = r() * w;
+			const y = r() * h;
+			const s = unit * (.025 + r() * .035);
+			const color = colors[Math.floor(r() * colors.length)];
+			const rot = Math.floor(r() * 360);
+			const shape = Math.floor(r() * 4);
+			const t = `transform="translate(${n(x)} ${n(y)}) rotate(${rot})"`;
+			if (shape === 0) out += `<circle ${t} r="${n(s / 2)}" fill="${color}"/>`;
+			else if (shape === 1) out += `<rect ${t} x="${n(-s / 2)}" y="${n(-s / 5)}" width="${n(s)}" height="${n(s / 2.5)}" rx="${n(s / 6)}" fill="${color}"/>`;
+			else if (shape === 2) out += `<path ${t} d="M0 ${n(-s / 2)} L${n(s / 2)} ${n(s / 2)} L${n(-s / 2)} ${n(s / 2)}Z" fill="${color}"/>`;
+			else out += `<path ${t} d="M${n(-s)} 0 q${n(s / 2)} ${n(-s / 2)} ${n(s)} 0 t${n(s)} 0" fill="none" stroke="${color}" stroke-width="${n(s / 3)}" stroke-linecap="round"/>`;
+		}
+		return out;
+	},
+	landscape(w, h, c, r) {
+		const layers = 3 + Math.floor(r() * 2);
+		const colors = [
+			c.soft,
+			c.mid,
+			c.deep,
+			c.pop
+		].slice(0, layers);
+		const sun = Math.min(w, h) * (.1 + r() * .08);
+		let out = `<circle cx="${n(w * (.2 + r() * .6))}" cy="${n(h * (.18 + r() * .15))}" r="${n(sun)}" fill="${c.pop}"/>`;
+		for (let k = 0; k < layers; k++) {
+			const base = h * (.45 + k / layers * .4);
+			const peaks = 2 + Math.floor(r() * 3);
+			const points = [`M0 ${n(h)}`, `L0 ${n(base)}`];
+			for (let i = 0; i <= peaks * 2; i++) {
+				const x = i / (peaks * 2) * w;
+				const y = base - (i % 2 ? h * (.06 + r() * .16) : h * r() * .04);
+				points.push(`L${n(x)} ${n(y)}`);
+			}
+			points.push(`L${n(w)} ${n(h)}Z`);
+			out += `<path d="${points.join(" ")}" fill="${colors[k]}" stroke="${colors[k]}" stroke-linejoin="round" stroke-width="${n(Math.min(w, h) * .04)}"/>`;
+		}
+		return out;
+	},
+	grid(w, h, c, r) {
+		const step = Math.min(w, h) / (5 + Math.floor(r() * 4));
+		const line = Math.min(w, h) * .004;
+		let out = "";
+		const cols = Math.ceil(w / step);
+		const rows = Math.ceil(h / step);
+		const fx = Math.floor(r() * Math.max(1, cols - 2));
+		const fy = Math.floor(r() * Math.max(1, rows - 2));
+		out += `<circle cx="${n((fx + 1) * step)}" cy="${n((fy + 1) * step)}" r="${n(step)}" fill="${c.pop}"/>`;
+		out += `<rect x="${n((fx + 2) % cols * step)}" y="${n((fy + 3) % rows * step)}" width="${n(step)}" height="${n(step)}" fill="${c.deep}"/>`;
+		for (let x = step; x < w; x += step) out += `<line x1="${n(x)}" y1="0" x2="${n(x)}" y2="${n(h)}" stroke="${c.mid}" stroke-width="${n(line)}"/>`;
+		for (let y = step; y < h; y += step) out += `<line x1="0" y1="${n(y)}" x2="${n(w)}" y2="${n(y)}" stroke="${c.mid}" stroke-width="${n(line)}"/>`;
+		return out;
+	}
+};
+function iconMarkup(name, w, h, c, style) {
+	const paths = ICONS[name];
+	if (!paths) return "";
+	const size = Math.min(w, h) * .34;
+	const cx = w / 2;
+	const cy = h / 2;
+	const scale = size / 24;
+	const quiet = style === "elegant" || style === "minimal";
+	const plate = quiet ? c.base : c.pop === c.base ? c.light : c.pop;
+	const strokeColor = readable(quiet ? c.deep : c.base, plate, 3);
+	const strokeWidth = {
+		bold: 2.1,
+		playful: 1.9,
+		elegant: 1.1,
+		minimal: 1.4
+	}[style];
+	const ring = quiet ? `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(size * .82)}" fill="none" stroke="${c.deep}" stroke-width="${n(scale * .6)}"/>` : "";
+	return `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(size * .82)}" fill="${plate}"/>${ring}<g transform="translate(${n(cx - size / 2)} ${n(cy - size / 2)}) scale(${n(scale * 100) / 100})" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${paths}</g>`;
+}
+function artworkSvg(input) {
+	const aspect = Math.min(Math.max(input.aspect || 1, .2), 5);
+	const w = 600 * Math.sqrt(aspect);
+	const h = 600 / Math.sqrt(aspect);
+	const colors = colorsFor(input);
+	const motif = pickMotif(input.style, input.seed, input.motif);
+	const body = MOTIFS[motif](w, h, colors, random(input.seed * 31 + motif.length), input.style);
+	const icon = input.icon ? iconMarkup(input.icon, w, h, colors, input.style) : "";
+	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(w)} ${n(h)}" preserveAspectRatio="xMidYMid slice"><rect width="${n(w)}" height="${n(h)}" fill="${colors.base}"/>${body}${icon}</svg>`;
+}
+function artworkUrl(input) {
+	return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(artworkSvg(input))}")`;
 }
 //#endregion
 //#region src/render/fit.ts
@@ -8795,48 +9453,6 @@ function paintTile(tile, palette) {
 	}
 }
 //#endregion
-//#region src/render/patterns.ts
-/**
-* Decorative SVG backgrounds for image tiles that have no photo yet, so a fresh
-* design already looks finished. Drawn in the tile's own colors.
-*/
-function patternUrl(style, base, ink, variant) {
-	const c1 = mix(base, ink, .14);
-	const c2 = mix(base, ink, .28);
-	const c3 = mix(base, ink, .55);
-	const flip = variant % 2 === 0 ? "" : " transform=\"translate(200 0) scale(-1 1)\"";
-	let shapes;
-	switch (style) {
-		case "bold":
-			shapes = `<circle cx="150" cy="58" r="74" fill="${c1}"/>
-        <circle cx="38" cy="172" r="52" fill="${c2}"/>
-        <rect x="-40" y="104" width="300" height="20" fill="${c3}" transform="rotate(-20 100 100)"/>
-        <rect x="-40" y="136" width="300" height="8" fill="${c2}" transform="rotate(-20 100 100)"/>`;
-			break;
-		case "elegant":
-			shapes = [
-				0,
-				16,
-				32,
-				48
-			].map((d) => `<path d="M${30 + d} 210 V${120 + d * .4} a${70 - d} ${70 - d} 0 0 1 ${140 - 2 * d} 0 V210" fill="none" stroke="${c3}" stroke-width="1.2"/>`).join("").concat(`<circle cx="100" cy="52" r="16" fill="${c2}"/>`);
-			break;
-		case "playful":
-			shapes = `<path d="M40 30 C90 0 170 20 170 80 C170 140 110 130 80 160 C50 190 0 150 12 100 C20 64 10 44 40 30Z" fill="${c1}"/>
-        <circle cx="160" cy="160" r="30" fill="${c2}"/>
-        <circle cx="46" cy="176" r="10" fill="${c3}"/>
-        <circle cx="150" cy="36" r="8" fill="${c3}"/>
-        <path d="M20 120 q20 -20 40 0 t40 0 t40 0 t40 0" fill="none" stroke="${c3}" stroke-width="5" stroke-linecap="round"/>`;
-			break;
-		case "minimal": shapes = `<defs><pattern id="d" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.6" fill="${c2}"/></pattern></defs>
-        <rect width="200" height="200" fill="url(#d)"/>
-        <circle cx="128" cy="92" r="58" fill="none" stroke="${c3}" stroke-width="2"/>
-        <circle cx="128" cy="92" r="20" fill="${c3}"/>`;
-	}
-	const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice"><rect width="200" height="200" fill="${base}"/><g${flip}>${shapes}</g></svg>`;
-	return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
-}
-//#endregion
 //#region src/render/tile.ts
 var EMOJI_FONT = "\"Apple Color Emoji\", \"Segoe UI Emoji\", \"Noto Color Emoji\", sans-serif";
 var ALIGN = {
@@ -8884,7 +9500,7 @@ function tileRender(tile, rect, canvasW, canvasH, design) {
 	const isDisplay = spec.font === "display";
 	const logo = tile.kind === "brand" && tile.image ? tile.image : void 0;
 	let backgroundImage;
-	if (tile.kind === "image") backgroundImage = tile.image ? `url("${tile.image}")` : patternUrl(design.style, paint.background === "transparent" ? design.palette.bg : paint.background, paint.color, hashString(tile.id));
+	if (tile.kind === "image") backgroundImage = tile.image ? `url("${tile.image}")` : artworkFor(tile, design, paint, w / h);
 	return {
 		paint,
 		backgroundImage,
@@ -8906,6 +9522,21 @@ function tileRender(tile, rect, canvasW, canvasH, design) {
 			justify: ALIGN[tile.kind].justify
 		}
 	};
+}
+/** Generated picture for an image tile without a photo; see artwork.ts. */
+function artworkFor(tile, design, paint, aspect) {
+	const seed = tile.art?.seed ?? hashString(tile.id);
+	const icon = tile.art && tile.art.icon !== void 0 ? tile.art.icon : topicIcon(design.tiles.map((t) => t.text).join(" "), seed);
+	return artworkUrl({
+		style: design.style,
+		palette: design.palette,
+		base: paint.background === "transparent" ? design.palette.bg : paint.background,
+		ink: paint.color,
+		aspect,
+		seed,
+		motif: tile.art?.motif,
+		icon
+	});
 }
 //#endregion
 //#region src/render/html.ts
@@ -9382,6 +10013,19 @@ function withColors(palette, colors) {
 	}
 	return next;
 }
+/** Applies "art"/"icon" choices to an image tile's artwork settings. */
+function withArt(current, art, icon) {
+	const next = { ...current ?? { seed: newArtSeed() } };
+	if (art === "auto") delete next.motif;
+	else if (art) next.motif = art;
+	if (icon === "auto") delete next.icon;
+	else if (icon === "none") next.icon = null;
+	else if (icon !== void 0) {
+		if (!ICONS[icon]) throw new Error(`Unknown icon "${icon}". Use "auto", "none" or one of: ${Object.keys(ICONS).sort().join(", ")}.`);
+		next.icon = icon;
+	}
+	return next;
+}
 async function buildTile(root, input, taken) {
 	const spec = KINDS[input.kind];
 	const tile = {
@@ -9392,6 +10036,7 @@ async function buildTile(root, input, taken) {
 		tone: input.tone ?? spec.defaultTone
 	};
 	if (input.image_path) tile.image = await loadImage(root, input.image_path);
+	if (input.kind === "image") tile.art = withArt(void 0, input.art, input.icon);
 	return tile;
 }
 function indexOf(design, id) {
@@ -9418,6 +10063,10 @@ async function applyOperations(root, design, operations) {
 			if (operation.tone) tile.tone = operation.tone;
 			if (operation.remove_image) delete tile.image;
 			if (operation.image_path) tile.image = await loadImage(root, operation.image_path);
+			if (operation.art !== void 0 || operation.icon !== void 0) {
+				if (tile.kind !== "image") throw new Error(`"art" and "icon" apply to image tiles; ${tile.id} is a ${tile.kind} tile.`);
+				tile.art = withArt(tile.art ?? { seed: hashString(tile.id) }, operation.art, operation.icon);
+			}
 			next.tiles[index] = tile;
 			break;
 		}
@@ -9455,6 +10104,22 @@ async function applyOperations(root, design, operations) {
 				...next,
 				palette
 			};
+			break;
+		}
+		case "shuffle_art": {
+			const targets = operation.tile_id ? [indexOf(next, operation.tile_id)] : next.tiles.flatMap((t, i) => t.kind === "image" ? [i] : []);
+			if (targets.length === 0) throw new Error("This design has no image tile.");
+			for (const index of targets) {
+				const tile = next.tiles[index];
+				if (tile.kind !== "image") throw new Error(`${tile.id} is not an image tile.`);
+				next.tiles[index] = {
+					...tile,
+					art: {
+						...tile.art ?? {},
+						seed: newArtSeed()
+					}
+				};
+			}
 			break;
 		}
 		case "next_layout":
@@ -9557,6 +10222,12 @@ var LONG_COPY = {
 	info: 110,
 	brand: 40
 };
+function describeImage(tile, design) {
+	if (tile.image) return "(photo)";
+	const seed = tile.art?.seed ?? hashString(tile.id);
+	const icon = tile.art?.icon !== void 0 ? tile.art.icon : topicIcon(design.tiles.map((t) => t.text).join(" "), seed);
+	return `(generated art: ${pickMotif(design.style, seed, tile.art?.motif)}${tile.art?.motif ? "" : " (auto)"}, icon ${icon ?? "none"}; no photo yet)`;
+}
 /** The tools' logic, independent of MCP so it can be tested directly. */
 var TilecastService = class {
 	root;
@@ -9708,7 +10379,7 @@ var TilecastService = class {
 			`${verb} design "${entry.id}": style ${design.style}, palette ${palette ?? "custom"} (bg ${design.palette.bg}, accent ${design.palette.accent}), layout variant ${design.seed}.`,
 			"Tiles in reading order (first = top-left):",
 			...design.tiles.map((tile, i) => {
-				const content = tile.kind === "image" ? tile.image ? "(photo)" : "(decorative pattern, no photo yet)" : JSON.stringify(tile.text);
+				const content = tile.kind === "image" ? describeImage(tile, design) : JSON.stringify(tile.text);
 				const logo = tile.kind === "brand" && tile.image ? " (logo image)" : "";
 				return `  ${i + 1}. id=${tile.id} ${tile.kind} size=${tile.size} tone=${tile.tone}: ${content}${logo}`;
 			}),
@@ -23489,9 +24160,10 @@ var VERSION = "0.2.0";
 //#region mcp/tools.ts
 var INSTRUCTIONS = `Tilecast designs posters and social graphics out of tiles. One design renders into four formats at once: A4 poster (2480×3508), square post (1080×1080), story (1080×1920) and 16:9 banner (1920×1080). A layout engine places the tiles; you decide the copy, order, size and tone.
 Workflow: (1) create_design with tiles you write yourself. (2) Look at the attached preview and fix what reads badly with update_design: swap_tiles or move_tile to rearrange, set_tile to edit copy, size or tone, set_style, set_palette, next_layout for another arrangement. (3) export_design writes full-size PNGs and standalone HTML to tilecast/export/.
+Image tiles without a photo get generated artwork that fits the topic and differs for every design; shuffle_art draws another one, and image_path puts in a real photo (the user's, or one you generated or found).
 Write short poster copy in the user's language and use only facts the user gave you: never invent prices, dates, addresses, phone numbers or links.`;
 var PALETTE_NAMES = PALETTES.map((p) => p.name).join(", ");
-var kind = _enum(TILE_KINDS).describe("headline: main message, 2-7 words (exactly one). text: 1-2 supporting sentences. number: one striking figure such as \"-30%\", \"49 zł\", \"12.10\" (max ~8 chars). cta: call to action with the link or contact, e.g. \"Order at roma.pl →\". info: when/where/contact, up to 3 short lines separated by \\n. image: photo slot (leave text empty; pass image_path for a real photo, otherwise a decorative pattern is drawn). emoji: one emoji. brand: organizer or company name (or a logo via image_path).");
+var kind = _enum(TILE_KINDS).describe("headline: main message, 2-7 words (exactly one). text: 1-2 supporting sentences. number: one striking figure such as \"-30%\", \"49 zł\", \"12.10\" (max ~8 chars). cta: call to action with the link or contact, e.g. \"Order at roma.pl →\". info: when/where/contact, up to 3 short lines separated by \\n. image: picture slot (leave text empty); pass image_path for a real photo, otherwise Tilecast draws generated artwork that fits the topic and differs for every design. emoji: one emoji. brand: organizer or company name (or a logo via image_path).");
 var size = _enum(TILE_SIZES).describe("Share of the canvas area. Typical: headline L or XL, image L, key number M or L, details S.");
 var tone = _enum(TILE_TONES).describe("accent: accent-colored tile; surface: card; ink: inverted high-contrast tile; clear: no background. Neighbouring tiles look best in different tones.");
 var imagePath = string().describe("Path to a PNG/JPEG/WebP/GIF/SVG file (photo for image tiles, logo for brand tiles), relative to the project.");
@@ -23510,12 +24182,20 @@ var formatId = _enum([
 	"story",
 	"banner"
 ]);
+var art = _enum(["auto", ...ART_MOTIFS]).describe("Image tiles without a photo get generated artwork. Motif, or \"auto\" (picked per design from the style).");
+var icon = _enum([
+	"auto",
+	"none",
+	...ICON_NAMES
+]).describe("Icon drawn on the generated artwork: \"auto\" picks one that fits the copy's topic, \"none\" leaves it out.");
 var tileInput = object$1({
 	kind,
 	text: string().optional().describe("Tile copy. Empty for image tiles."),
 	size: size.optional(),
 	tone: tone.optional(),
-	image_path: imagePath.optional()
+	image_path: imagePath.optional(),
+	art: art.optional(),
+	icon: icon.optional()
 });
 var operation = discriminatedUnion("op", [
 	object$1({
@@ -23526,7 +24206,9 @@ var operation = discriminatedUnion("op", [
 		size: size.optional(),
 		tone: tone.optional(),
 		image_path: imagePath.optional(),
-		remove_image: boolean().optional()
+		remove_image: boolean().optional(),
+		art: art.optional(),
+		icon: icon.optional()
 	}),
 	tileInput.extend({
 		op: literal("add_tile"),
@@ -23555,6 +24237,10 @@ var operation = discriminatedUnion("op", [
 		palette: palette.optional(),
 		colors: colors.optional()
 	}),
+	object$1({
+		op: literal("shuffle_art"),
+		tile_id: string().optional().describe("Default: every image tile.")
+	}).describe("Draw a different generated picture for image tiles without a photo."),
 	object$1({ op: literal("next_layout") }),
 	object$1({
 		op: literal("set_layout"),
@@ -23608,7 +24294,7 @@ function createTilecastServer(service) {
 	}, safely((args) => service.create(args)));
 	server.registerTool("update_design", {
 		title: "Edit a design",
-		description: "Edit a design and get a fresh preview. Operations run in order: set_tile, add_tile, remove_tile, swap_tiles, move_tile, set_style, set_palette, next_layout (another arrangement of the same tiles), set_layout. Tile order drives the layout in every format: earlier tiles land top-left, so rearranging tiles moves them in all formats at once.",
+		description: "Edit a design and get a fresh preview. Operations run in order: set_tile, add_tile, remove_tile, swap_tiles, move_tile, set_style, set_palette, shuffle_art (another generated picture), next_layout (another arrangement of the same tiles), set_layout. Tile order drives the layout in every format: earlier tiles land top-left, so rearranging tiles moves them in all formats at once.",
 		inputSchema: {
 			id: string().describe("Design id from create_design or list_designs."),
 			operations: array(operation).min(1),

@@ -62,10 +62,14 @@ Jeśli repozytorium jest publiczne, zamiast klonowania możesz użyć `npx -y gi
 | Narzędzie | Co robi |
 | --- | --- |
 | `create_design` | tworzy projekt z kafelków (albo szkic z jednego zdania) i zwraca podgląd 4 formatów |
-| `update_design` | zmienia projekt: `swap_tiles`, `move_tile`, `set_tile`, `add_tile`, `remove_tile`, `set_style`, `set_palette`, `next_layout`, `set_layout` |
+| `update_design` | zmienia projekt: `swap_tiles`, `move_tile`, `set_tile`, `add_tile`, `remove_tile`, `set_style`, `set_palette`, `shuffle_art`, `next_layout`, `set_layout` |
 | `preview_design` | podgląd wszystkich formatów albo jednego w większym rozmiarze |
 | `export_design` | PNG (plakat 2480×3508 w 300 dpi, 1080×1080, 1080×1920, 1920×1080) + samodzielny HTML z animacją wejścia |
 | `list_designs`, `get_design` | lista zapisanych projektów i pełny JSON projektu |
+
+**Obrazki.** Kafelek „zdjęcie” bez prawdziwego zdjęcia dostaje wygenerowaną grafikę w kolorach projektu. To jeden z 12 motywów (promienie, fale, plamy, bauhaus, raster, paski, okręgi, łuki, gradient, konfetti, pejzaż, siatka) z ikoną pasującą do tematu: nutą przy koncercie, filiżanką przy kawiarni, czapką absolwenta przy kursie. Każdy nowy projekt dostaje inny obrazek. Agent może wybrać motyw i ikonę (`art`, `icon`) albo wylosować nowy obrazek (`shuffle_art`). Prawdziwe zdjęcie podaje ścieżką (`image_path`): Twoje albo takie, które sam wygenerował lub pobrał innym narzędziem.
+
+![Każdy projekt z innym obrazkiem](docs/variety.png)
 
 Projekty zapisują się w folderze projektu jako `tilecast/<id>.tilecast.json`, więc można je commitować. Eksport trafia do `tilecast/export/<id>/` albo do wskazanego folderu w projekcie, np. `public/promo` w aplikacji webowej. Zdjęcia i logo agent podaje ścieżką (`image_path`), a trafiają do projektu jako osadzone dane.
 
@@ -79,6 +83,7 @@ Zmienne środowiskowe (opcjonalne):
 - **Renderer HTML** (`src/render/`) tworzy samodzielną stronę z osadzonymi czcionkami (łacińskie i środkowoeuropejskie znaki) oraz małym skryptem, który dobiera największy rozmiar tekstu mieszczący się w kafelku. Ten sam kod rysuje kafelki w edytorze.
 - **Zrzuty PNG** (`mcp/chrome.ts`) robi zainstalowany Chrome w trybie headless, sterowany przez protokół DevTools. Rozmiar jest zawsze dokładny, a zrzut powstaje dopiero po dopasowaniu tekstu. Serwer nie potrzebuje Puppeteera ani Playwrighta.
 - **Serwer MCP** (`mcp/`) jest spakowany do jednego pliku `plugin/server/tilecast-mcp.mjs` razem z zależnościami i czcionkami, więc plugin działa bez `npm install`.
+- **Generator obrazków** (`src/render/artwork.ts`) rysuje motyw jako SVG z ziarna losowania zapisanego w kafelku. Ten sam obrazek jest przekomponowany pod proporcje każdego formatu, więc kampania wygląda spójnie. Ikony pochodzą z [Lucide](https://lucide.dev) (licencja ISC).
 - **Kontrast** pilnuje czytelności: jeśli wybrany kolor tekstu (np. własny kolor marki) jest nieczytelny na tle, zmienia się na prawie czarny albo prawie biały.
 
 ## Tilecast Studio (edytor wizualny)
@@ -90,7 +95,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-Studio działa bez klucza. Z kluczem `ANTHROPIC_API_KEY` w pliku `.env` (zob. `.env.example`) potrafi też samo zaprojektować grafikę z opisu i zmieniać ją poleceniem.
+W edytorze kafelka „zdjęcie” można wybrać motyw i ikonę albo kliknąć „Losuj inny obrazek”. Studio działa bez klucza. Z kluczem `ANTHROPIC_API_KEY` w pliku `.env` (zob. `.env.example`) potrafi też samo zaprojektować grafikę z opisu i zmieniać ją poleceniem.
 
 ![Tilecast Studio](docs/studio.png)
 
@@ -100,7 +105,7 @@ Studio działa bez klucza. Z kluczem `ANTHROPIC_API_KEY` w pliku `.env` (zob. `.
 | --- | --- |
 | `npm test` | testy: silnik układu, renderer, serwer MCP (także spakowany, przez stdio) i zrzuty z Chrome |
 | `npm run typecheck` | sprawdzenie typów |
-| `npm run build:mcp` | przebudowanie `plugin/server/tilecast-mcp.mjs`. Uruchom je po zmianach w `mcp/` lub `src/` i zacommituj wynik |
+| `npm run build:mcp` | przebudowanie `plugin/server/tilecast-mcp.mjs` razem z licencjami wbudowanych pakietów (`THIRD_PARTY_NOTICES.md`). Uruchom je po zmianach w `mcp/` lub `src/` i zacommituj wynik |
 | `npm run dev` / `npm run build` | Studio: serwer deweloperski / build produkcyjny |
 
 ```

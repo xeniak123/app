@@ -1,10 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { normalizeHex } from '../src/model/color';
+import { newArtSeed } from '../src/model/ids';
 import { KINDS } from '../src/model/kinds';
+import { hashString } from '../src/model/layout';
 import { MAX_TEXT, MAX_TILES } from '../src/model/sanitize';
 import { PALETTES } from '../src/model/themes';
-import type { Design, Palette, StyleId, Tile, TileKind, TileSize, TileTone } from '../src/model/types';
+import type { ArtMotif, Design, Palette, StyleId, Tile, TileArt, TileKind, TileSize, TileTone } from '../src/model/types';
+import { ICONS } from '../src/render/icons';
 
 export interface TileInput {
   kind: TileKind;
@@ -12,6 +15,10 @@ export interface TileInput {
   size?: TileSize;
   tone?: TileTone;
   image_path?: string;
+  /** Image tiles without a photo: artwork motif, or "auto". */
+  art?: ArtMotif | 'auto';
+  /** Image tiles without a photo: icon name, "auto" (from the topic) or "none". */
+  icon?: string;
 }
 
 export type Operation =
@@ -24,6 +31,8 @@ export type Operation =
       tone?: TileTone;
       image_path?: string;
       remove_image?: boolean;
+      art?: ArtMotif | 'auto';
+      icon?: string;
     }
   | ({ op: 'add_tile'; position?: number } & TileInput)
   | { op: 'remove_tile'; tile_id: string }
@@ -31,6 +40,7 @@ export type Operation =
   | { op: 'move_tile'; tile_id: string; position: number }
   | { op: 'set_style'; style: StyleId }
   | { op: 'set_palette'; palette?: string; colors?: Partial<Palette> }
+  | { op: 'shuffle_art'; tile_id?: string }
   | { op: 'next_layout' }
   | { op: 'set_layout'; variant: number };
 
@@ -102,6 +112,20 @@ function withColors(palette: Palette, colors: Partial<Palette>): Palette {
   return next;
 }
 
+/** Applies "art"/"icon" choices to an image tile's artwork settings. */
+function withArt(current: TileArt | undefined, art?: ArtMotif | 'auto', icon?: string): TileArt {
+  const next: TileArt = { ...(current ?? { seed: newArtSeed() }) };
+  if (art === 'auto') delete next.motif;
+  else if (art) next.motif = art;
+  if (icon === 'auto') delete next.icon;
+  else if (icon === 'none') next.icon = null;
+  else if (icon !== undefined) {
+    if (!ICONS[icon]) throw new Error(`Unknown icon "${icon}". Use "auto", "none" or one of: ${Object.keys(ICONS).sort().join(', ')}.`);
+    next.icon = icon;
+  }
+  return next;
+}
+
 export async function buildTile(root: string, input: TileInput, taken: Iterable<string>): Promise<Tile> {
   const spec = KINDS[input.kind];
   const tile: Tile = {
@@ -112,6 +136,8 @@ export async function buildTile(root: string, input: TileInput, taken: Iterable<
     tone: input.tone ?? spec.defaultTone,
   };
   if (input.image_path) tile.image = await loadImage(root, input.image_path);
+  // Every image tile gets its own random artwork, so no two designs share a picture.
+  if (input.kind === 'image') tile.art = withArt(undefined, input.art, input.icon);
   return tile;
 }
 
@@ -141,6 +167,11 @@ export async function applyOperations(root: string, design: Design, operations: 
         if (operation.tone) tile.tone = operation.tone;
         if (operation.remove_image) delete tile.image;
         if (operation.image_path) tile.image = await loadImage(root, operation.image_path);
+        if (operation.art !== undefined || operation.icon !== undefined) {
+          if (tile.kind !== 'image') throw new Error(`"art" and "icon" apply to image tiles; ${tile.id} is a ${tile.kind} tile.`);
+          // Keep the current picture's seed so only the requested aspect changes.
+          tile.art = withArt(tile.art ?? { seed: hashString(tile.id) }, operation.art, operation.icon);
+        }
         next.tiles[index] = tile;
         break;
       }
@@ -172,6 +203,18 @@ export async function applyOperations(root: string, design: Design, operations: 
         let palette = operation.palette ? findPalette(operation.palette) : next.palette;
         if (operation.colors) palette = withColors(palette, operation.colors);
         next = { ...next, palette };
+        break;
+      }
+      case 'shuffle_art': {
+        const targets = operation.tile_id
+          ? [indexOf(next, operation.tile_id)]
+          : next.tiles.flatMap((t, i) => (t.kind === 'image' ? [i] : []));
+        if (targets.length === 0) throw new Error('This design has no image tile.');
+        for (const index of targets) {
+          const tile = next.tiles[index];
+          if (tile.kind !== 'image') throw new Error(`${tile.id} is not an image tile.`);
+          next.tiles[index] = { ...tile, art: { ...(tile.art ?? {}), seed: newArtSeed() } };
+        }
         break;
       }
       case 'next_layout':

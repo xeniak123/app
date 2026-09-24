@@ -1,8 +1,9 @@
 import { normalizeHex } from './color';
-import { newId } from './ids';
+import { newArtSeed, newId } from './ids';
 import { KINDS } from './kinds';
 import { PALETTES } from './themes';
 import {
+  ART_MOTIFS,
   STYLE_IDS,
   TILE_KINDS,
   TILE_SIZES,
@@ -11,6 +12,7 @@ import {
   type Palette,
   type StyleId,
   type Tile,
+  type TileArt,
 } from './types';
 
 export const MAX_TILES = 12;
@@ -25,6 +27,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+const ICON_NAME = /^[a-z0-9-]{1,40}$/;
+
+function sanitizeArt(raw: unknown): TileArt | undefined {
+  if (!isRecord(raw)) return undefined;
+  const art: TileArt = {
+    seed: typeof raw.seed === 'number' && Number.isInteger(raw.seed) ? raw.seed >>> 0 : newArtSeed(),
+  };
+  const motif = oneOf(ART_MOTIFS, raw.motif);
+  if (motif) art.motif = motif;
+  if (raw.icon === null) art.icon = null;
+  else if (typeof raw.icon === 'string' && ICON_NAME.test(raw.icon)) art.icon = raw.icon;
+  return art;
+}
+
 export function sanitizeTile(raw: unknown): Tile | null {
   if (!isRecord(raw)) return null;
   const kind = oneOf(TILE_KINDS, raw.kind);
@@ -32,6 +48,7 @@ export function sanitizeTile(raw: unknown): Tile | null {
   const spec = KINDS[kind];
   const text = typeof raw.text === 'string' ? raw.text.trim().slice(0, MAX_TEXT) : '';
   const image = typeof raw.image === 'string' && IMAGE_DATA_URL.test(raw.image) ? raw.image : undefined;
+  const art = kind === 'image' ? sanitizeArt(raw.art) : undefined;
   return {
     id: typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : newId(),
     kind,
@@ -39,6 +56,7 @@ export function sanitizeTile(raw: unknown): Tile | null {
     size: oneOf(TILE_SIZES, raw.size) ?? spec.defaultSize,
     tone: oneOf(TILE_TONES, raw.tone) ?? spec.defaultTone,
     ...(image ? { image } : {}),
+    ...(art ? { art } : {}),
   };
 }
 

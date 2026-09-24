@@ -5,8 +5,11 @@ import { KINDS } from '../src/model/kinds';
 import { designFromBrief, pickPalette, pickStyle } from '../src/model/offline';
 import { MAX_TILES } from '../src/model/sanitize';
 import { slugify } from '../src/model/slug';
+import { hashString } from '../src/model/layout';
 import type { Design, FormatId, Palette, StyleId, Tile } from '../src/model/types';
+import { pickMotif } from '../src/render/artwork';
 import { designTitle, formatDocument, sheetDocument } from '../src/render/html';
+import { topicIcon } from '../src/render/icons';
 import { CHROME_MISSING, findChrome, renderScreenshots, screenshotHtml } from './chrome';
 import { applyOperations, buildTile, paletteName, tileId, type Operation, type TileInput } from './operations';
 import { DesignStore, type StoredDesign } from './store';
@@ -37,6 +40,14 @@ export interface ExportInput {
 
 /** Copy lengths past which a tile usually reads badly on a poster. */
 const LONG_COPY: Partial<Record<string, number>> = { headline: 60, text: 170, number: 12, cta: 40, info: 110, brand: 40 };
+
+function describeImage(tile: Tile, design: Design): string {
+  if (tile.image) return '(photo)';
+  const seed = tile.art?.seed ?? hashString(tile.id);
+  const icon = tile.art?.icon !== undefined ? tile.art.icon : topicIcon(design.tiles.map((t) => t.text).join(' '), seed);
+  const motif = pickMotif(design.style, seed, tile.art?.motif);
+  return `(generated art: ${motif}${tile.art?.motif ? '' : ' (auto)'}, icon ${icon ?? 'none'}; no photo yet)`;
+}
 
 /** The tools' logic, independent of MCP so it can be tested directly. */
 export class TilecastService {
@@ -190,7 +201,7 @@ export class TilecastService {
         `(bg ${design.palette.bg}, accent ${design.palette.accent}), layout variant ${design.seed}.`,
       'Tiles in reading order (first = top-left):',
       ...design.tiles.map((tile, i) => {
-        const content = tile.kind === 'image' ? (tile.image ? '(photo)' : '(decorative pattern, no photo yet)') : JSON.stringify(tile.text);
+        const content = tile.kind === 'image' ? describeImage(tile, design) : JSON.stringify(tile.text);
         const logo = tile.kind === 'brand' && tile.image ? ' (logo image)' : '';
         return `  ${i + 1}. id=${tile.id} ${tile.kind} size=${tile.size} tone=${tile.tone}: ${content}${logo}`;
       }),

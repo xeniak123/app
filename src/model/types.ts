@@ -20,6 +20,32 @@ export type TileTone = (typeof TILE_TONES)[number];
 export const STYLE_IDS = ['bold', 'elegant', 'playful', 'minimal'] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
 
+/** Generative artwork styles for image tiles without a photo. */
+export const ART_MOTIFS = [
+  'sunburst',
+  'waves',
+  'blobs',
+  'bauhaus',
+  'halftone',
+  'stripes',
+  'rings',
+  'arches',
+  'mesh',
+  'confetti',
+  'landscape',
+  'grid',
+] as const;
+export type ArtMotif = (typeof ART_MOTIFS)[number];
+
+export interface TileArt {
+  /** Varies shapes and composition; every new image tile gets a random one. */
+  seed: number;
+  /** Missing = picked from the style's motifs by `seed`. */
+  motif?: ArtMotif;
+  /** Icon name, `null` for none; missing = picked from the design's topic. */
+  icon?: string | null;
+}
+
 export interface Tile {
   id: string;
   kind: TileKind;
@@ -29,6 +55,8 @@ export interface Tile {
   tone: TileTone;
   /** Data URL of an uploaded photo (image tiles) or logo (brand tiles). */
   image?: string;
+  /** Artwork drawn in image tiles that have no photo. */
+  art?: TileArt;
 }
 
 export interface Palette {

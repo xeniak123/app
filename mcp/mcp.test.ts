@@ -137,6 +137,40 @@ describe('tilecast MCP server', () => {
     expect(json).not.toContain('base64');
   });
 
+  it('gives image tiles their own generated artwork and lets the agent change it', async () => {
+    const created = await call('create_design', {
+      name: 'art',
+      preview: false,
+      tiles: [
+        { kind: 'headline', text: 'Koncert jazzowy' },
+        { kind: 'image' },
+        { kind: 'image', art: 'waves', icon: 'none' },
+      ],
+    });
+    expect(created.text).toContain('id=image image size=L tone=accent: (generated art:');
+    expect(created.text).toContain('id=image-2 image size=L tone=accent: (generated art: waves, icon none');
+    const read = async () => JSON.parse(await readFile(path.join(root, 'tilecast', 'art.tilecast.json'), 'utf8')).design.tiles;
+    const [, first, second] = await read();
+    expect(first.art.seed).not.toBe(second.art.seed);
+
+    await call('update_design', { id: 'art', preview: false, operations: [{ op: 'shuffle_art', tile_id: 'image' }] });
+    const shuffled = await read();
+    expect(shuffled[1].art.seed).not.toBe(first.art.seed);
+    expect(shuffled[2].art).toEqual(second.art);
+
+    await call('update_design', {
+      id: 'art',
+      preview: false,
+      operations: [{ op: 'set_tile', tile_id: 'image-2', art: 'auto', icon: 'guitar' }],
+    });
+    const updated = await read();
+    expect(updated[2].art).toEqual({ seed: second.art.seed, icon: 'guitar' });
+
+    expect(
+      (await call('update_design', { id: 'art', operations: [{ op: 'set_tile', tile_id: 'headline', art: 'waves' }] })).text,
+    ).toContain('apply to image tiles');
+  });
+
   it('exports full-size PNGs and standalone HTML', async () => {
     const result = await call('export_design', { id: 'pizza-friday', formats: ['square', 'story'] });
     expect(result.isError).toBe(false);

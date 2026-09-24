@@ -29,7 +29,7 @@ don't read.
 | kind | what goes in | typical size | good tones |
 | --- | --- | --- | --- |
 | `headline` | the main message, 2–7 words, exactly one | L or XL | clear, accent |
-| `image` | photo slot; `image_path` for a real photo, otherwise a decorative pattern | L | accent |
+| `image` | picture slot: `image_path` for a real photo, otherwise generated artwork (see Pictures) | L | accent |
 | `number` | one striking figure: `-30%`, `49 zł`, `12.10`, `Free entry` (≤ 12 chars) | M or L | accent |
 | `text` | one or two supporting sentences (≤ 120 chars) | M | surface |
 | `info` | when / where / contact, up to 3 short lines separated by `\n` | S | surface, clear |
@@ -68,6 +68,23 @@ Example `create_design` call:
 }
 ```
 
+## Pictures
+
+An image tile without a photo gets generated artwork in the design's colors: a
+motif (`sunburst`, `waves`, `blobs`, `bauhaus`, `halftone`, `stripes`, `rings`,
+`arches`, `mesh`, `confetti`, `landscape`, `grid`) plus an icon that matches the
+topic of the copy (a music note for a concert, a cup for a café…). Every new
+design gets a different picture.
+
+- Check the picture in the preview. If the icon or motif doesn't suit the
+  message, use `set_tile` with `art` (a motif, or `auto`) and `icon` (an icon
+  name, `auto` or `none`), or the `shuffle_art` operation for a different random
+  picture.
+- Real photos work best for food, products, places and people. Use the user's
+  photos (`image_path`). If you have an image-generation or stock-photo tool,
+  create or download a fitting photo into the project and pass its path. Don't
+  reuse one photo across unrelated designs.
+
 ## 3. Review the preview and iterate
 
 Every create/update call returns a preview image of all four formats. Look at it
@@ -78,6 +95,7 @@ before you show it to the user, and fix what reads badly:
 - **Weak hierarchy** (headline doesn't dominate) → headline `XL`, details `S`.
 - **Awkward arrangement** → `swap_tiles` / `move_tile` to change the order, or
   `next_layout` to try another arrangement of the same tiles.
+- **Picture doesn't fit** → `set_tile` with `art` / `icon`, `shuffle_art`, or a real photo.
 - **Flat or noisy colors** → change tones so neighbours differ, try another palette.
 
 Batch several operations into one `update_design` call. Two or three rounds are

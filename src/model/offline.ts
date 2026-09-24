@@ -1,4 +1,4 @@
-import { newId } from './ids';
+import { newArtSeed, newId } from './ids';
 import { KINDS } from './kinds';
 import { hashString } from './layout';
 import { PALETTES } from './themes';
@@ -203,7 +203,9 @@ export function pickPalette(brief: string): Palette {
 
 export function makeTile(kind: TileKind, text: string, size?: TileSize): Tile {
   const spec = KINDS[kind];
-  return { id: newId(), kind, text, size: size ?? spec.defaultSize, tone: spec.defaultTone };
+  const tile: Tile = { id: newId(), kind, text, size: size ?? spec.defaultSize, tone: spec.defaultTone };
+  if (kind === 'image') tile.art = { seed: newArtSeed() };
+  return tile;
 }
 
 export function designFromBrief(brief: string): Design {

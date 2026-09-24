@@ -483,6 +483,16 @@ button {
   box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.6);
 }
 
+.art-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.art-controls .btn {
+  grid-column: 1 / -1;
+}
+
 .emoji-row {
   display: flex;
   flex-wrap: wrap;

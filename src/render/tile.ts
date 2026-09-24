@@ -3,7 +3,8 @@ import { hashString } from '../model/layout';
 import { paintTile, type TilePaint } from '../model/paint';
 import { STYLES } from '../model/themes';
 import type { Design, Rect, Tile, TileKind } from '../model/types';
-import { patternUrl } from './patterns';
+import { artworkUrl } from './artwork';
+import { topicIcon } from './icons';
 
 export const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
@@ -59,14 +60,7 @@ export function tileRender(tile: Tile, rect: Rect, canvasW: number, canvasH: num
 
   let backgroundImage: string | undefined;
   if (tile.kind === 'image') {
-    backgroundImage = tile.image
-      ? `url("${tile.image}")`
-      : patternUrl(
-          design.style,
-          paint.background === 'transparent' ? design.palette.bg : paint.background,
-          paint.color,
-          hashString(tile.id),
-        );
+    backgroundImage = tile.image ? `url("${tile.image}")` : artworkFor(tile, design, paint, w / h);
   }
 
   return {
@@ -90,4 +84,23 @@ export function tileRender(tile: Tile, rect: Rect, canvasW: number, canvasH: num
       justify: ALIGN[tile.kind].justify,
     },
   };
+}
+
+/** Generated picture for an image tile without a photo; see artwork.ts. */
+function artworkFor(tile: Tile, design: Design, paint: TilePaint, aspect: number): string {
+  const seed = tile.art?.seed ?? hashString(tile.id);
+  const icon =
+    tile.art && tile.art.icon !== undefined
+      ? tile.art.icon
+      : topicIcon(design.tiles.map((t) => t.text).join(' '), seed);
+  return artworkUrl({
+    style: design.style,
+    palette: design.palette,
+    base: paint.background === 'transparent' ? design.palette.bg : paint.background,
+    ink: paint.color,
+    aspect,
+    seed,
+    motif: tile.art?.motif,
+    icon,
+  });
 }

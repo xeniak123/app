@@ -2,12 +2,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { PALETTES } from '../src/model/themes';
-import { STYLE_IDS, TILE_KINDS, TILE_SIZES, TILE_TONES } from '../src/model/types';
+import { ART_MOTIFS, STYLE_IDS, TILE_KINDS, TILE_SIZES, TILE_TONES } from '../src/model/types';
+import { ICON_NAMES } from '../src/render/icons';
 import type { TilecastService, ToolResult } from './service';
 import { VERSION } from './version';
 
 export const INSTRUCTIONS = `Tilecast designs posters and social graphics out of tiles. One design renders into four formats at once: A4 poster (2480×3508), square post (1080×1080), story (1080×1920) and 16:9 banner (1920×1080). A layout engine places the tiles; you decide the copy, order, size and tone.
 Workflow: (1) create_design with tiles you write yourself. (2) Look at the attached preview and fix what reads badly with update_design: swap_tiles or move_tile to rearrange, set_tile to edit copy, size or tone, set_style, set_palette, next_layout for another arrangement. (3) export_design writes full-size PNGs and standalone HTML to tilecast/export/.
+Image tiles without a photo get generated artwork that fits the topic and differs for every design; shuffle_art draws another one, and image_path puts in a real photo (the user's, or one you generated or found).
 Write short poster copy in the user's language and use only facts the user gave you: never invent prices, dates, addresses, phone numbers or links.`;
 
 const PALETTE_NAMES = PALETTES.map((p) => p.name).join(', ');
@@ -17,7 +19,8 @@ const kind = z
   .describe(
     'headline: main message, 2-7 words (exactly one). text: 1-2 supporting sentences. number: one striking figure such as "-30%", "49 zł", "12.10" (max ~8 chars). ' +
       'cta: call to action with the link or contact, e.g. "Order at roma.pl →". info: when/where/contact, up to 3 short lines separated by \\n. ' +
-      'image: photo slot (leave text empty; pass image_path for a real photo, otherwise a decorative pattern is drawn). emoji: one emoji. brand: organizer or company name (or a logo via image_path).',
+      'image: picture slot (leave text empty); pass image_path for a real photo, otherwise Tilecast draws generated artwork that fits the topic and differs for every design. ' +
+      'emoji: one emoji. brand: organizer or company name (or a logo via image_path).',
   );
 const size = z.enum(TILE_SIZES).describe('Share of the canvas area. Typical: headline L or XL, image L, key number M or L, details S.');
 const tone = z
@@ -38,6 +41,12 @@ const colors = z
   })
   .describe('Hex colors (#rrggbb) overriding the palette: bg = canvas, surface = cards, ink = main text, accent, accentInk = text on accent. Unreadable text colors are corrected automatically.');
 const formatId = z.enum(['poster', 'square', 'story', 'banner']);
+const art = z
+  .enum(['auto', ...ART_MOTIFS])
+  .describe('Image tiles without a photo get generated artwork. Motif, or "auto" (picked per design from the style).');
+const icon = z
+  .enum(['auto', 'none', ...ICON_NAMES])
+  .describe('Icon drawn on the generated artwork: "auto" picks one that fits the copy\'s topic, "none" leaves it out.');
 
 const tileInput = z.object({
   kind,
@@ -45,6 +54,8 @@ const tileInput = z.object({
   size: size.optional(),
   tone: tone.optional(),
   image_path: imagePath.optional(),
+  art: art.optional(),
+  icon: icon.optional(),
 });
 
 const operation = z.discriminatedUnion('op', [
@@ -57,6 +68,8 @@ const operation = z.discriminatedUnion('op', [
     tone: tone.optional(),
     image_path: imagePath.optional(),
     remove_image: z.boolean().optional(),
+    art: art.optional(),
+    icon: icon.optional(),
   }),
   tileInput.extend({
     op: z.literal('add_tile'),
@@ -67,6 +80,10 @@ const operation = z.discriminatedUnion('op', [
   z.object({ op: z.literal('move_tile'), tile_id: z.string(), position: z.number().int().min(0) }),
   z.object({ op: z.literal('set_style'), style }),
   z.object({ op: z.literal('set_palette'), palette: palette.optional(), colors: colors.optional() }),
+  z.object({
+    op: z.literal('shuffle_art'),
+    tile_id: z.string().optional().describe('Default: every image tile.'),
+  }).describe('Draw a different generated picture for image tiles without a photo.'),
   z.object({ op: z.literal('next_layout') }),
   z.object({ op: z.literal('set_layout'), variant: z.number().int().min(0).describe('0 is the default arrangement.') }),
 ]);
@@ -120,7 +137,7 @@ export function createTilecastServer(service: TilecastService): McpServer {
       title: 'Edit a design',
       description:
         'Edit a design and get a fresh preview. Operations run in order: set_tile, add_tile, remove_tile, swap_tiles, move_tile, ' +
-        'set_style, set_palette, next_layout (another arrangement of the same tiles), set_layout. ' +
+        'set_style, set_palette, shuffle_art (another generated picture), next_layout (another arrangement of the same tiles), set_layout. ' +
         'Tile order drives the layout in every format: earlier tiles land top-left, so rearranging tiles moves them in all formats at once.',
       inputSchema: {
         id: z.string().describe('Design id from create_design or list_designs.'),

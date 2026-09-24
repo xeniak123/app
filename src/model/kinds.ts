@@ -1,4 +1,4 @@
-import type { TileKind, TileSize, TileTone } from './types';
+import type { ArtMotif, TileKind, TileSize, TileTone } from './types';
 
 export interface KindSpec {
   label: string;
@@ -125,4 +125,19 @@ export const TONE_LABEL: Record<TileTone, string> = {
   surface: 'Karta',
   ink: 'Kontrast',
   clear: 'Bez tła',
+};
+
+export const MOTIF_LABEL: Record<ArtMotif, string> = {
+  sunburst: 'Promienie',
+  waves: 'Fale',
+  blobs: 'Plamy',
+  bauhaus: 'Bauhaus',
+  halftone: 'Raster',
+  stripes: 'Paski',
+  rings: 'Okręgi',
+  arches: 'Łuki',
+  mesh: 'Gradient',
+  confetti: 'Konfetti',
+  landscape: 'Pejzaż',
+  grid: 'Siatka',
 };

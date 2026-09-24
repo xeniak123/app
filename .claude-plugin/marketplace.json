@@ -1,6 +1,6 @@
 {
   "name": "tilecast",
-  "description": "Tilecast: posters, social posts, stories and banners designed by your coding agent.",
+  "description": "Tilecast: posters, announcements, social posts and launch videos designed from scratch by your coding agent.",
   "owner": {
     "name": "xeniak123"
   },
@@ -8,7 +8,7 @@
     {
       "name": "tilecast",
       "source": "./plugin",
-      "description": "Posters, social posts, stories and banners from tiles: one design, four formats, PNG and HTML export."
+      "description": "Design posters, announcements, social posts and launch videos from scratch as HTML/CSS, with previews, a design critic, print PDFs and MP4s with music."
     }
   ]
 }

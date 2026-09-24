@@ -101,7 +101,7 @@ Agenci bez obsługi skilli dostają cały poradnik przez narzędzie `guide`, a s
 | `check` | krytyk: tekst poza kadrem, ucięty albo zasłonięty, kolizje, za mały tekst, kontrast mierzony na pikselach (także na zdjęciach i gradientach), brakujące fonty i obrazki, zasoby z sieci, błędy skryptów; w wideo czas czytania każdej linijki, błyski, pusty początek lub koniec, brak dźwięku i propozycja klatki-okładki |
 | `render_image` | PNG każdego formatu (A4/A3/A5 w 300 dpi + PDF w wymiarze papieru, social w natywnym rozmiarze) |
 | `render_video` | MP4 30 fps z miksem ścieżek `<audio data-tilecast>`, kolory BT.709, okładka jako klatka 0 i osobny `.jpg`; `quality: "draft"` renderuje szybką wersję w połowie rozmiaru |
-| `assets` | `list_fonts`, `find_icons` / `get_icons` (1854 ikony Lucide jako SVG), `make_music` (podkład z siatką beatów), `make_sfx` (whoosh, riser, impact…), `list_sfx` / `add_sfx` (efekty CC0), `list_formats` |
+| `assets` | `list_fonts`, `find_icons` / `get_icons` (1854 ikony Lucide jako SVG), `make_music` (podkład z siatką beatów), `analyze_music` (beaty i mocne momenty Twojego utworu), `make_sfx` (whoosh, riser, impact…), `list_sfx` / `add_sfx` (efekty CC0), `list_formats` |
 | `guide` | poradnik: workflow, design, ruch, tony, audio, runtime |
 
 Formaty: `poster-a4` (1240×1754 → 2480×3508), `poster-a3`, `flyer-a5`, `square` (1080×1080), `portrait` (1080×1350), `story` (1080×1920), `landscape` (1920×1080), `og` (1200×630 → 2400×1260) albo dowolny `SZEROKOŚĆxWYSOKOŚĆ`, np. `1500x500`.
@@ -128,6 +128,8 @@ Formaty: `poster-a4` (1240×1754 → 2480×3508), `poster-a3`, `flyer-a5`, `squa
 ## Muzyka i dźwięk
 
 `make_music` generuje podkład dokładnie na długość filmu w jednym z pięciu stylów: `upbeat`, `chill`, `cinematic`, `driving`, `minimal`. Zwraca też siatkę beatów i mocne momenty: start, drop (tu wchodzi odsłona), powrót po przerwie i finałowe uderzenie (tu ląduje logo). Agent montuje film pod te momenty, jak brag. Wszystko powstaje w syntezatorze w kodzie, więc wolno tego używać bez żadnych licencji. Ten sam `seed` daje ten sam utwór.
+
+Masz własny utwór? `analyze_music` znajduje jego tempo, beaty, początki taktów, krzywą energii i mocne momenty (drop, powrót bitu, najmocniejsze uderzenia) i zapisuje je obok pliku, więc film montuje się pod prawdziwą piosenkę tak samo jak pod wygenerowaną.
 
 `make_sfx` generuje efekty (whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer), a `add_sfx` kopiuje nagrane efekty Kenney (CC0). Render miksuje wszystkie ścieżki, a limiter pilnuje, żeby miks się nie przesterował. Przykładowy film ma -16 LUFS i szczyt -0,7 dBFS.
 

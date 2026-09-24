@@ -214,6 +214,18 @@ describe.skipIf(!chrome)('tools', () => {
     await expect(service.assets({ action: 'make_music', style: 'polka', duration: 8, dir: 'promo/audio' })).rejects.toThrow(/Unknown style/);
   });
 
+  it.skipIf(!ffmpeg)('finds the beat of the user\'s own track', async () => {
+    await service.assets({ action: 'make_music', style: 'driving', duration: 12, dir: 'promo/own', name: 'song', seed: 4 });
+    const out = textOf(await service.assets({ action: 'analyze_music', file: 'promo/own/song.wav' }));
+    expect(out).toMatch(/about 12[34](\.\d)? BPM/);
+    expect(out).toContain('Wrote promo/own/song.cues.json');
+    expect(out).toMatch(/Energy by bar: [▁▂▃▄▅▆▇█]+/);
+    const cues = JSON.parse(await readFile(path.join(root, 'promo/own/song.cues.json'), 'utf8'));
+    expect(cues).toMatchObject({ file: 'song.wav', analyzed: true });
+    expect(Math.abs(cues.bpm - 124)).toBeLessThan(1.5);
+    await expect(service.assets({ action: 'analyze_music', file: 'promo/own/missing.mp3' })).rejects.toThrow(/Cannot find/);
+  }, 60_000);
+
   it.skipIf(!ffmpeg)(
     'renders a video with its sound, the poster baked in as frame 0',
     async () => {

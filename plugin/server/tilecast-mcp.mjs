@@ -4988,7 +4988,7 @@ var ZodType$1 = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
 		return this;
 	},
 	refine(check, params) {
-		return this.check(refine(check, params));
+		return this.check(refine$1(check, params));
 	},
 	superRefine(refinement, params) {
 		return this.check(superRefine(refinement, params));
@@ -5848,7 +5848,7 @@ var ZodCustom = /*@__PURE__*/ $constructor("ZodCustom", (inst, def) => {
 function custom(fn, _params) {
 	return /* @__PURE__ */ _custom(ZodCustom, fn ?? (() => true), _params);
 }
-function refine(fn, _params = {}) {
+function refine$1(fn, _params = {}) {
 	return /* @__PURE__ */ _refine(ZodCustom, fn, _params);
 }
 function superRefine(fn, params) {
@@ -9752,6 +9752,267 @@ function stillTime(info, explicit) {
 	return Math.min(info.animationEnd, 30);
 }
 //#endregion
+//#region mcp/beats.ts
+/**
+* Beat tracking for the user's own music, so an edit can land on a real
+* track the way it lands on a generated one: tempo from the autocorrelation
+* of a spectral-flux onset envelope, beats by dynamic programming (Ellis
+* 2007), bar starts from where the low end hits, and strong cues where the
+* energy jumps or the biggest hits are.
+*/
+var ANALYSIS_RATE = 22050;
+var HOP = 256;
+var WINDOW = 1024;
+var FPS = ANALYSIS_RATE / HOP;
+function fft(re, im) {
+	const n = re.length;
+	for (let i = 1, j = 0; i < n; i++) {
+		let bit = n >> 1;
+		for (; j & bit; bit >>= 1) j ^= bit;
+		j ^= bit;
+		if (i < j) {
+			[re[i], re[j]] = [re[j], re[i]];
+			[im[i], im[j]] = [im[j], im[i]];
+		}
+	}
+	for (let size = 2; size <= n; size <<= 1) {
+		const step = -2 * Math.PI / size;
+		for (let start = 0; start < n; start += size) for (let k = 0; k < size / 2; k++) {
+			const angle = step * k;
+			const wr = Math.cos(angle);
+			const wi = Math.sin(angle);
+			const a = start + k;
+			const b = a + size / 2;
+			const tr = re[b] * wr - im[b] * wi;
+			const ti = re[b] * wi + im[b] * wr;
+			re[b] = re[a] - tr;
+			im[b] = im[a] - ti;
+			re[a] += tr;
+			im[a] += ti;
+		}
+	}
+}
+/** Log-spaced band edges (in FFT bins) between 30 Hz and 8 kHz. */
+function bandEdges(count) {
+	const binHz = ANALYSIS_RATE / WINDOW;
+	const edges = [];
+	for (let i = 0; i <= count; i++) edges.push(Math.max(1, Math.round(30 * (8e3 / 30) ** (i / count) / binHz)));
+	return edges;
+}
+/** Onset strength per frame (all bands, and the low end alone) plus frame loudness. */
+function onsetEnvelope(samples) {
+	const frames = Math.max(0, Math.floor((samples.length - WINDOW) / HOP) + 1);
+	const bands = 36;
+	const edges = bandEdges(bands);
+	const lowBands = edges.findIndex((bin) => bin * (ANALYSIS_RATE / WINDOW) > 180);
+	const hann = Float64Array.from({ length: WINDOW }, (_, i) => .5 - .5 * Math.cos(2 * Math.PI * i / WINDOW));
+	const onset = new Float64Array(frames);
+	const low = new Float64Array(frames);
+	const loudness = new Float64Array(frames);
+	let previous = new Float64Array(bands);
+	const re = new Float64Array(WINDOW);
+	const im = new Float64Array(WINDOW);
+	for (let f = 0; f < frames; f++) {
+		let power = 0;
+		for (let i = 0; i < WINDOW; i++) {
+			const v = samples[f * HOP + i];
+			re[i] = v * hann[i];
+			im[i] = 0;
+			power += v * v;
+		}
+		loudness[f] = Math.sqrt(power / WINDOW);
+		fft(re, im);
+		const current = new Float64Array(bands);
+		for (let b = 0; b < bands; b++) {
+			let sum = 0;
+			for (let k = edges[b]; k < Math.max(edges[b] + 1, edges[b + 1]); k++) sum += re[k] * re[k] + im[k] * im[k];
+			current[b] = Math.log1p(1e3 * Math.sqrt(sum));
+			const rise = Math.max(0, current[b] - previous[b]);
+			onset[f] += rise;
+			if (b < lowBands) low[f] += rise;
+		}
+		previous = current;
+	}
+	const detrend = (x) => {
+		const out = new Float64Array(x.length);
+		const half = Math.round(FPS * .25);
+		let sum = 0;
+		for (let i = 0; i < Math.min(x.length, half); i++) sum += x[i];
+		for (let i = 0; i < x.length; i++) {
+			if (i + half < x.length) sum += x[i + half];
+			if (i - half - 1 >= 0) sum -= x[i - half - 1];
+			const count = Math.min(x.length - 1, i + half) - Math.max(0, i - half) + 1;
+			out[i] = Math.max(0, x[i] - sum / count);
+		}
+		return out;
+	};
+	return {
+		onset: detrend(onset),
+		low: detrend(low),
+		loudness
+	};
+}
+function estimatePeriod(onset) {
+	const minLag = Math.floor(FPS * 60 / 190);
+	const maxLag = Math.ceil(FPS * 60 / 55);
+	const ac = /* @__PURE__ */ new Float64Array(378);
+	const mean = onset.reduce((s, v) => s + v, 0) / Math.max(1, onset.length);
+	for (let lag = 1; lag < ac.length && lag < onset.length; lag++) {
+		let sum = 0;
+		for (let i = 0; i + lag < onset.length; i++) sum += (onset[i] - mean) * (onset[i + lag] - mean);
+		ac[lag] = sum / (onset.length - lag);
+	}
+	let zero = 0;
+	for (let i = 0; i < onset.length; i++) zero += (onset[i] - mean) ** 2;
+	zero /= Math.max(1, onset.length);
+	let best = minLag;
+	let bestScore = -Infinity;
+	for (let lag = minLag; lag <= maxLag; lag++) {
+		const bpm = 60 * FPS / lag;
+		const prior = Math.exp(-.5 * (Math.log2(bpm / 115) / .9) ** 2);
+		const score = (ac[lag] + .5 * (ac[2 * lag] ?? 0) + .25 * (ac[4 * lag] ?? 0)) * prior;
+		if (score > bestScore) {
+			bestScore = score;
+			best = lag;
+		}
+	}
+	const [a, b, c] = [
+		ac[best - 1],
+		ac[best],
+		ac[best + 1]
+	];
+	const shift = a - 2 * b + c !== 0 ? .5 * (a - c) / (a - 2 * b + c) : 0;
+	return {
+		period: best + Math.max(-.5, Math.min(.5, shift)),
+		confidence: zero > 0 ? Math.max(0, Math.min(1, ac[best] / zero)) : 0
+	};
+}
+function trackBeats(onset, period) {
+	const n = onset.length;
+	const std = Math.sqrt(onset.reduce((s, v) => s + v * v, 0) / Math.max(1, n)) || 1;
+	const local = Float64Array.from(onset, (v) => v / std);
+	const score = new Float64Array(n);
+	const back = new Int32Array(n).fill(-1);
+	const tightness = 100;
+	for (let t = 0; t < n; t++) {
+		let best = 0;
+		let from = -1;
+		for (let p = t - Math.round(2 * period); p <= t - Math.round(period / 2); p++) {
+			if (p < 0) continue;
+			const s = score[p] - tightness * Math.log((t - p) / period) ** 2;
+			if (s > best || from < 0) {
+				best = s;
+				from = p;
+			}
+		}
+		score[t] = local[t] + (from >= 0 ? Math.max(0, best) : 0);
+		back[t] = from >= 0 && best > 0 ? from : -1;
+	}
+	let t = n - 1;
+	for (let i = Math.max(0, n - Math.round(period)); i < n; i++) if (score[i] > score[t]) t = i;
+	const beats = [];
+	while (t >= 0) {
+		beats.push(t);
+		t = back[t];
+	}
+	beats.reverse();
+	while (beats.length && beats[0] - period > period * .25) beats.unshift(Math.round(beats[0] - period));
+	return beats;
+}
+/** Nudges a beat frame to the strongest onset within a couple of frames. */
+function refine(frame, onset) {
+	let best = frame;
+	for (let f = Math.max(0, frame - 2); f <= Math.min(onset.length - 1, frame + 2); f++) if (onset[f] > onset[best]) best = f;
+	const [a, b, c] = [
+		onset[best - 1] ?? 0,
+		onset[best],
+		onset[best + 1] ?? 0
+	];
+	const shift = a - 2 * b + c < 0 ? .5 * (a - c) / (a - 2 * b + c) : 0;
+	return best + Math.max(-.5, Math.min(.5, shift));
+}
+var round = (t) => Number(t.toFixed(3));
+function analyzeBeats(samples) {
+	const duration = samples.length / ANALYSIS_RATE;
+	if (duration < 3) throw new Error("The track is shorter than 3 seconds; there is no beat to find.");
+	const { onset, low, loudness } = onsetEnvelope(samples);
+	const { period, confidence } = estimatePeriod(onset);
+	const frames = trackBeats(onset, period);
+	const toTime = (frame) => (frame * HOP + WINDOW / 2) / ANALYSIS_RATE;
+	const beats = frames.map((f) => toTime(refine(f, onset))).filter((t) => t >= 0 && t < duration);
+	const lowAt = (t) => {
+		const f = Math.round((t * ANALYSIS_RATE - WINDOW / 2) / HOP);
+		let peak = 0;
+		for (let i = Math.max(0, f - 2); i <= Math.min(low.length - 1, f + 2); i++) peak = Math.max(peak, low[i] + .25 * onset[i]);
+		return peak;
+	};
+	const phaseScore = [
+		0,
+		1,
+		2,
+		3
+	].map((phase) => beats.filter((_, i) => i % 4 === phase).reduce((s, t) => s + lowAt(t), 0));
+	const phase = phaseScore.indexOf(Math.max(...phaseScore));
+	const downbeats = beats.filter((_, i) => i % 4 === phase);
+	const beatLoudness = beats.map((t, i) => {
+		const from = Math.max(0, Math.round(t * ANALYSIS_RATE / HOP));
+		const to = Math.min(loudness.length, Math.round((beats[i + 1] ?? t + period / FPS) * ANALYSIS_RATE / HOP));
+		let sum = 0;
+		for (let f = from; f < to; f++) sum += loudness[f] ** 2;
+		return Math.sqrt(sum / Math.max(1, to - from));
+	});
+	const bars = downbeats.map((t) => {
+		const i = beats.indexOf(t);
+		const slice = beatLoudness.slice(i, i + 4);
+		return slice.reduce((s, v) => s + v, 0) / Math.max(1, slice.length);
+	});
+	const loudest = Math.max(...bars, 1e-9);
+	const energy = bars.map((v) => Math.round(v / loudest * 9));
+	const candidates = [];
+	const mean = beatLoudness.reduce((s, v) => s + v, 0) / Math.max(1, beatLoudness.length) || 1;
+	beats.forEach((t, i) => {
+		if (i < 4 || i + 4 > beats.length) return;
+		const before = beatLoudness.slice(i - 4, i).reduce((s, v) => s + v, 0) / 4;
+		const jump = (beatLoudness.slice(i, i + 4).reduce((s, v) => s + v, 0) / 4 - before) / mean;
+		if (jump > .25) candidates.push({
+			t,
+			what: "energy jumps up (a drop or an entry); put a reveal or a scene change here",
+			score: jump * 2
+		});
+	});
+	for (const t of downbeats) {
+		const hit = lowAt(t);
+		candidates.push({
+			t,
+			what: "a hard hit on a bar start; good for a slam or a cut",
+			score: hit / (Math.max(...downbeats.map(lowAt)) || 1)
+		});
+	}
+	const strong = [];
+	const minGap = period / FPS * 4 * 1.5;
+	for (const c of candidates.sort((a, b) => b.score - a.score)) {
+		if (strong.length >= 5) break;
+		if (strong.every((s) => Math.abs(s.t - c.t) >= minGap)) strong.push({
+			t: round(c.t),
+			what: c.what
+		});
+	}
+	strong.sort((a, b) => a.t - b.t);
+	return {
+		duration: round(duration),
+		bpm: Number((60 * FPS / period).toFixed(1)),
+		beats: beats.map(round),
+		downbeats: downbeats.map(round),
+		strong,
+		energy,
+		confidence: Number(confidence.toFixed(2))
+	};
+}
+function energyBar(levels) {
+	const blocks = "▁▂▃▄▅▆▇█";
+	return levels.map((v) => blocks[Math.min(7, Math.round(v / 9 * 7))]).join("");
+}
+//#endregion
 //#region mcp/ffmpeg.ts
 /**
 * Video encoding goes through ffmpeg: the one on PATH, $TILECAST_FFMPEG, or a
@@ -9846,6 +10107,44 @@ async function ensureFfmpeg() {
 		path: binary,
 		installed: true
 	};
+}
+/** Decodes any audio file ffmpeg can read to mono float samples at `rate` Hz. */
+function decodeAudio(ffmpeg, file, rate, maxSeconds = 600) {
+	return new Promise((resolve, reject) => {
+		const child = spawn(ffmpeg, [
+			"-v",
+			"error",
+			"-i",
+			file,
+			"-t",
+			String(maxSeconds),
+			"-ac",
+			"1",
+			"-ar",
+			String(rate),
+			"-f",
+			"f32le",
+			"-"
+		], { stdio: [
+			"ignore",
+			"pipe",
+			"pipe"
+		] });
+		const chunks = [];
+		let errors = "";
+		child.stdout.on("data", (chunk) => chunks.push(chunk));
+		child.stderr.on("data", (chunk) => {
+			errors = (errors + chunk.toString()).slice(-2e3);
+		});
+		child.on("error", reject);
+		child.on("exit", (code) => {
+			if (code !== 0) return reject(/* @__PURE__ */ new Error(`Cannot decode ${path.basename(file)}: ${errors.trim().split("\n").pop() ?? `exit ${code}`}`));
+			const data = Buffer.concat(chunks);
+			const samples = new Float32Array(Math.floor(data.length / 4));
+			for (let i = 0; i < samples.length; i++) samples[i] = data.readFloatLE(i * 4);
+			resolve(samples);
+		});
+	});
 }
 //#endregion
 //#region mcp/formats.ts
@@ -46154,6 +46453,35 @@ var TilecastService = class {
 					"Not the right feel? Try another style, bpm or seed; or use the user's own track instead."
 				].join("\n"))] };
 			}
+			case "analyze_music": {
+				if (!args.file) throw new Error("analyze_music needs file: the track inside the project, e.g. \"promo/audio/song.mp3\".");
+				const track = resolveInside(this.root, args.file);
+				if (!existsSync(track)) throw new Error(`Cannot find ${args.file}. Copy the track into the project first.`);
+				const found = analyzeBeats(await decodeAudio((await ensureFfmpeg()).path, track, ANALYSIS_RATE));
+				const cuesFile = track.replace(/\.[^./\\]+$/, "") + ".cues.json";
+				const beat = 60 / found.bpm;
+				await writeFile(cuesFile, `${JSON.stringify({
+					file: path.basename(track),
+					analyzed: true,
+					bpm: found.bpm,
+					beat: Number(beat.toFixed(4)),
+					duration: found.duration,
+					strong: found.strong,
+					energy: found.energy,
+					downbeats: found.downbeats,
+					beats: found.beats
+				}, null, 2)}\n`);
+				const firstBar = found.downbeats[0] ?? found.beats[0] ?? 0;
+				return { content: [text([
+					`${this.relative(track)}: ${seconds(found.duration)}, about ${found.bpm} BPM (a beat every ${beat.toFixed(3)}s, a bar every ${(beat * 4).toFixed(3)}s). Wrote ${this.relative(cuesFile)}.`,
+					`First beat ${seconds(found.beats[0] ?? 0)}; bars start at ${seconds(firstBar)}, ${found.downbeats.slice(1, 8).map((t) => seconds(t)).join(", ")}${found.downbeats.length > 8 ? ", …" : ""}.`,
+					`Energy by bar: ${energyBar(found.energy)} (quiet ▁ … loud █).`,
+					"Strong cues: land the big moments within ±0.15s of these:",
+					...found.strong.map((c) => `  ${seconds(c.t).padEnd(8)} ${c.what}`),
+					found.confidence < .05 ? "The pulse is weak (free time, ambient or live playing): treat the grid as approximate and trust the energy curve more." : "Snap sequential entrances to consecutive beats; for lines people must read, use every other beat and hold them.",
+					"Trim the track to the video with data-trim (start) and data-duration, and fade it out with data-fade-out so it ends with the video."
+				].join("\n"))] };
+			}
 			case "make_sfx": {
 				if (!args.names?.length) throw new Error(`make_sfx needs names: ${Object.keys(SFX_KINDS).join(", ")}.`);
 				if (!args.dir) throw new Error("make_sfx needs dir: the folder to write into, usually next to the composition.");
@@ -60015,8 +60343,8 @@ var EMPTY_COMPLETION_RESULT = { completion: {
 //#endregion
 //#region mcp/guide.ts
 var files = /* #__PURE__ */ Object.assign({
-	"../plugin/skills/tilecast/SKILL.md": "---\nname: tilecast\ndescription: Design posters, flyers, announcements, social posts, banners and short promo or launch videos from scratch as HTML/CSS pages, then check and render them with the Tilecast MCP tools (preview, check, render_image, render_video, assets). Use when someone asks for a poster, plakat, flyer, ogłoszenie, social media graphic, story, banner, thumbnail, promo video, launch video or reel, says \"brag about this project\", or wants to announce an event, a sale, an opening or a release.\n---\n\n# Tilecast\n\nYou are the designer and the motion designer. There are no templates: every piece is a small web page you compose from scratch for this one message, the way a top studio would. Tilecast renders it pixel-exact in headless Chrome, critiques it, and exports print PDFs, PNGs and MP4s.\n\nWhy a web page: HTML and CSS give you real typography, grids, gradients, masks, blend modes, SVG and animation, and you already write them fluently. Why not templates: a template makes every poster look like the last one. The work is to find the one idea that fits this message and build exactly that.\n\n## Parse the request\n\nRead the whole request first. Options can come as flags or plain language:\n\n| Option | Values | Default |\n|---|---|---|\n| what | poster, flyer, announcement, social post, story, banner, video | inferred |\n| `--format` | `poster-a4`, `poster-a3`, `flyer-a5`, `square`, `portrait`, `story`, `landscape`, `og`, or `WIDTHxHEIGHT` | print: `poster-a4`; social: `square` + `story`; video: `landscape` (`story` for Reels, TikTok, Shorts) |\n| `--tone` | `default`, `polished`, `yc-parody`, `chaotic`, `deadpan`, `cinematic`, `app-store`, or freeform (\"fake Series A launch from 2016\") | inferred |\n| `--duration` | seconds (video) | about 20 (15–25) |\n| `--no-music`, `--no-sfx` | flags (video) | music and effects on |\n| language | the user's language | the language the user writes in |\n\nA freeform tone maps to the nearest preset for pacing and structure, but keep the user's words in the plan.\n\n## Output folder\n\nEach piece lives in its own folder: `tilecast/<slug>/` with `<slug>.html`, its assets (`assets/`, `audio/`), `plan.md`, and `export/` for renders. If the folder exists and the user asked for something new, use `tilecast/<slug>-YYYY-MM-DD-HHmmss/`. Never write outside the project.\n\n## Step 1: Inspect\n\nGather the material. Only the source changes; the questions after the table are the same for every input.\n\n| Input | Where the material comes from |\n|---|---|\n| A brief (\"jazz concert Saturday 7 pm in the park, free entry\") | The user's words. Everything the piece states must come from them. |\n| The current project (\"make a launch video\", \"/brag this\") | The code: main page, styles (exact colors, fonts), README, routes, key components. Find the product **in use**: entry → key action → result. |\n| A website URL | The site as a visitor sees it: copy, colors, fonts, logo, screenshots of its real UI. Save what you use into the piece's folder. |\n| Files (photos, logo, menu, price list) | Read them, copy what you use into the piece's folder. |\n\nThen answer, in a few words each:\n\n1. What is it, in one sentence?\n2. Who is it for, and what should they do after seeing it (come, buy, sign up, share)?\n3. The one thing a stranger must remember.\n4. The facts: date, time, place, price, link, contact. **Only the ones you were given.** Never invent a price, date, address, phone number, URL, testimonial or statistic. If a fact the piece needs is missing, leave it out or ask.\n5. The real material to show: product UI, photos, logo, brand colors and fonts.\n6. The hook: the single image, word or motion that stops the scroll.\n7. The tone.\n8. The formats, and for video the duration.\n9. The one-line caption someone would post with it.\n\n**Gate:** you can answer all nine.\n\n## Step 2: Plan\n\nWrite `tilecast/<slug>/plan.md`, one page:\n\n- **Concept:** the idea in one line. \"The date is so big it becomes the poster.\" \"The app's own chat bubble tells the story.\" Not \"a modern, clean poster\".\n- **Hierarchy:** what is read first, second, third. At most three levels.\n- **Layout:** a quick sketch in words for each format (what goes where, what is huge).\n- **Palette:** 2–4 colors with hex values, from the brand when there is one.\n- **Type:** a display family and a text family from the bundled fonts (`assets` `list_fonts`), with the weights.\n- **Imagery:** what the picture is: the real product, the user's photo, or something you draw in CSS and SVG. See [references/design.md](references/design.md).\n\nFor a video, also:\n\n- **Storyboard:** scenes with start times, durations, the exact on-screen text, the motion, and the transition into the next scene. Shape: Hook (2–3 s) → Reveal (2–4 s) → 2–3 highlights → Payoff with logo and call to action (2–4 s). Durations sum to the target.\n- **Reading budget:** every line people must read gets about 0.3 s per word fully visible and still (0.8 s minimum; the hook more). If a scene has more text than its length allows, cut the text or split the scene; never speed it up.\n- **Audio:** music style and where its strong cues land (the drop on the reveal, the final hit on the logo), and the few effects that mark cuts and big entrances. See [references/audio.md](references/audio.md).\n\n**Gate:** `plan.md` exists. For a video, the scene durations add up to the target and every line fits its reading budget.\n\n## Step 3: Compose\n\n**Read:** [references/design.md](references/design.md) every time; [references/motion.md](references/motion.md) for any video or animated piece; [references/runtime.md](references/runtime.md) for the composition contract; [references/tones.md](references/tones.md) for the chosen tone.\n\nWrite `tilecast/<slug>/<slug>.html` from scratch: one self-contained page, the canvas is the viewport, sizes relative to the canvas so the same file serves every format you planned. The plan is the contract: if a better idea comes up while composing, update `plan.md` so the concept and the page still agree. Put `<meta name=\"tilecast:formats\" content=\"…\">` in it; for a video also `tilecast:duration`, `tilecast:scenes` and, once you know it, `tilecast:poster`.\n\nFor video audio: `assets` `make_music` with the planned style and duration (or the user's own track), then retime the big moments to its strong cues; add effects with `make_sfx` or `add_sfx`.\n\n## Step 4: Look and check\n\n1. `preview` the composition. Look at the image properly: for a static piece every format side by side, for a video a filmstrip with every scene settled and every cut mid-transition.\n2. Judge it like an art director:\n   - **Squint test:** blur your eyes. Is the headline the first thing, and does the page have one clear shape?\n   - **Three-second test:** could a stranger say what, when and where after three seconds?\n   - Is everything aligned to something? Are the margins generous and equal? Does any format look cramped or empty?\n   - Would a top studio post this? If it looks like \"an AI made this\", find out why (see the anti-patterns in design.md) and fix it.\n3. `check`: the design critic. It measures text off the canvas or cut off, collisions, tiny text, contrast on the real pixels, missing fonts and images, and for video the reading time of every line across the whole timeline, flashes, an empty opening or ending, and missing audio.\n4. Fix and repeat until `check` reports no ✗ and the preview looks like something you would sign. Treat warnings as design feedback: fix them unless you can say why the design wants it that way.\n\n**Gate:** `check` passes with zero errors, and you have looked at every format (and for video, every scene and every cut).\n\n## Step 5: Render and deliver\n\n- **Images:** `render_image`. Print formats come out at 300 dpi as PNG plus a PDF of the exact paper size; social formats at their native size.\n- **Video:** `render_video` renders the final MP4 at 30 fps with the music and effects mixed. The best settled frame becomes frame 0 and is also saved as `.jpg`, so every platform's thumbnail shows it: set `tilecast:poster` to your strongest settled moment (the hook line, the reveal, or the final logo), or let Tilecast pick the moment with the most settled large type. `quality: \"draft\"` renders a quick half-size version first when the user wants to see motion before the final.\n- **Share copy:** write `tilecast/<slug>/share-copy.txt`: 1–3 sentences, postable as-is, specific, in the tone. No \"excited to share\".\n- **Tell the user** where the files are, the idea in one sentence, and offer one next step: another tone, another format, or re-rolling a scene or the music.\n\n## Laws\n\nThese apply to every piece, whatever the tone.\n\n- **One idea.** Every piece has one concept, one focal point and one thing to remember.\n- **Specific.** It must feel made for this exact message: the user's own words, facts, product and colors. Generic lines (\"elevate your experience\", \"streamline your workflow\") are banned.\n- **Show the thing.** Use the real product UI, the real photo, the real menu. Reuse the project's components, CSS and assets instead of drawing a lookalike. Never abstract filler.\n- **Hierarchy you can see from across the room.** Headline huge, facts clear, details quiet. Three sizes, not seven.\n- **Readable.** Contrast on the real pixels, nothing cut off, nothing too small for the format. In video, pace comes from motion and cuts, never from pulling text away early: fast in, then hold.\n- **The hook is everything.** On a poster, the thing you see first from a distance; in a video, the first two seconds.\n- **Short.** Posters say less than you think. Videos run 15–25 seconds; 18–22 is the sweet spot.\n- **Every frame postable.** Any still of a video, and any format of a poster, is worth sharing on its own.\n- **Honest.** Only facts you were given. Humor comes from the subject, not from trying.\n\n## Tones\n\n| Tone | Feel | Posters | Video pacing and cuts | Music |\n|---|---|---|---|---|\n| `default` | Playful, clean, postable | Bold type, one bright accent | 4–5 scenes, snappy moves, soft transitions | `upbeat` |\n| `polished` | Serious, elegant, restrained | Editorial serif, air, fine rules | 3–4 scenes, long holds, soft fades | `chill` |\n| `yc-parody` | Deadpan startup launch, played straight | Keynote minimal, one huge claim | 4–5 scenes, one claim each, hard cuts | `minimal` or `upbeat` |\n| `chaotic` | FAST, LOUD, ALL CAPS | Clashing colors, giant type, stickers | 6–8 scenes, some under 2 s, zoom and flash cuts | `driving` |\n| `deadpan` | Calm, dry, nothing is a joke | Vast empty space, small type | 3–4 scenes, one word at a time, slow fades | `minimal` |\n| `cinematic` | Trailer-scale, epic claims | Dark, dramatic light, huge title | 4–5 scenes, big type, dramatic wipes | `cinematic` |\n| `app-store` | Clean feature cards | Product front and center, soft shadows | 4–6 scenes, smooth slides | `upbeat` or `chill` |\n\nFull definitions: [references/tones.md](references/tones.md).\n\n## Credits\n\nThe video workflow, the creative laws and the tone presets are adapted from [/brag](https://github.com/latent-spaces/brag) by Shunit Haviv Hakimi (MIT license). The recorded sound effects are by [Kenney](https://kenney.nl) (CC0).\n",
-	"../plugin/skills/tilecast/references/audio.md": "# Audio\n\nA silent video feels unfinished. By default every video gets one music bed and a small number of well-timed effects, unless the user turns them off or silence is the stronger creative choice (some `deadpan` pieces). Sound is written with the edit: effects land on the frame the motion lands.\n\n## Music\n\n`assets` `make_music` generates a music bed for the exact length of the video, free to use, and tells you where its beats and strong moments are:\n\n```\nassets { action: \"make_music\", style: \"upbeat\", duration: 18, dir: \"tilecast/launch/audio\" }\n```\n\n| Style | Tempo | Feel | Tones |\n|---|---|---|---|\n| `upbeat` | 118 | Bright four-on-the-floor pop groove with a plucked arpeggio | `default`, `app-store`, launches |\n| `chill` | 88 | Warm electric piano, soft swung beat, sub bass | `polished`, food, lifestyle |\n| `cinematic` | 90 | Big drums, pulsing strings, risers and booms | `cinematic`, dramatic reveals |\n| `driving` | 124 | Dark rolling bass, tight hats | `chaotic`, tech, speed |\n| `minimal` | 100 | Soft kick, ticks, a marimba motif | `deadpan`, `yc-parody`, explainers |\n\nOptions: `bpm` (60–180), `key` (\"C\", \"F#\", \"Bb minor\", \"Am\"), `seed` for another variation, `name` for the file name. It writes `<name>.wav` and `<name>.cues.json`.\n\nThe arrangement always has the same shape, so the edit can rely on it:\n\n- **start (0 s):** a soft accent; the hook lands here.\n- **drop (about 2–3 s):** the full beat comes in; put the **reveal** here.\n- **breakdown and return** (in longer pieces, 8 bars or more: about 17 s at 118 BPM): the beat drops out for a bar and comes back; a scene change or highlight on the return.\n- **final hit:** the last downbeat at least 1.4 s before the end; land the **logo or payoff** here. The music rings out under the final frame.\n\nPlace it: `<audio data-tilecast src=\"audio/music-upbeat.wav\" data-start=\"0\" data-volume=\"0.8\"></audio>`.\n\nIf the user has their own track, copy it into the piece's folder and use it instead (they know its rights). It has no beat grid, so ask for its BPM or place moments by the structure you planned.\n\n## Sync (beat lock)\n\n- Move major reveals to within ±0.15 s of a strong cue (the drop, the return, the final hit). One to three locks per video.\n- Snap sequential accents (cards arriving, stats, icons) to consecutive beats from `beats`; for lines people read, every other beat.\n- Readability and the story come first; ignore a cue that would cut a line short.\n- Note the locks in CSS comments: `/* beat-locked 2.03 drop */`.\n\n## Effects\n\nGenerated, WAV (`assets` `make_sfx`, names plus `dir`):\n\n| Name | Use | Placement |\n|---|---|---|\n| `whoosh` | camera move, push, big transition | starts ~0.45 s before the cut (it peaks at 60%) |\n| `swipe` | card, panel or word sliding in | starts ~0.15 s before it lands |\n| `riser` | tension into a reveal (`duration` sets its length) | ends exactly on the hit: `data-start` = hit − duration |\n| `impact` | title slam, logo hit | on the landing frame |\n| `sub-drop` | weight under a reveal or drop | on the reveal |\n| `pop` | badge, like, element popping in | on the pop |\n| `tick` | counters, typing, list items | per item, quiet (0.2–0.35) |\n| `shimmer` | magic moment, success, logo glint | on the glint |\n\nRecorded (Kenney, CC0; `assets` `list_sfx` and `add_sfx`): `soft-hit`, `soft-hit-2`, `soft-hit-3` (warm thuds, the safest hits), `bell-ring` (logo payoff, once), `bell-short`, `bong`, `click`, `click-2`, `tap`, `rollover`, `switch`, `drop`, `card-slide`, `card-place`, `chips`, `glitch`.\n\n## Mixing\n\n- Music at `data-volume` 0.7–0.85, effects at 0.3–0.6 under it. The tool mixes everything and keeps the peak under 0 dB.\n- One hero sound per scene; repeated small sounds (ticks, clicks) quieter and not on every single item.\n- Clicks on the press, hits on the landing, whooshes ahead of the move.\n- Let the final hit and the music ring over the last frame; don't cut sound off with a hard stop.\n- Options on every `<audio data-tilecast>`: `data-start` (s), `data-volume` (0–1+), `data-fade-in`, `data-fade-out` (s), `data-trim` (skip the file's first seconds), `data-duration` (play only this long), `loop`.\n",
+	"../plugin/skills/tilecast/SKILL.md": "---\nname: tilecast\ndescription: Design posters, flyers, announcements, social posts, banners and short promo or launch videos from scratch as HTML/CSS pages, then check and render them with the Tilecast MCP tools (preview, check, render_image, render_video, assets). Use when someone asks for a poster, plakat, flyer, ogłoszenie, social media graphic, story, banner, thumbnail, promo video, launch video or reel, says \"brag about this project\", or wants to announce an event, a sale, an opening or a release.\n---\n\n# Tilecast\n\nYou are the designer and the motion designer. There are no templates: every piece is a small web page you compose from scratch for this one message, the way a top studio would. Tilecast renders it pixel-exact in headless Chrome, critiques it, and exports print PDFs, PNGs and MP4s.\n\nWhy a web page: HTML and CSS give you real typography, grids, gradients, masks, blend modes, SVG and animation, and you already write them fluently. Why not templates: a template makes every poster look like the last one. The work is to find the one idea that fits this message and build exactly that.\n\n## Parse the request\n\nRead the whole request first. Options can come as flags or plain language:\n\n| Option | Values | Default |\n|---|---|---|\n| what | poster, flyer, announcement, social post, story, banner, video | inferred |\n| `--format` | `poster-a4`, `poster-a3`, `flyer-a5`, `square`, `portrait`, `story`, `landscape`, `og`, or `WIDTHxHEIGHT` | print: `poster-a4`; social: `square` + `story`; video: `landscape` (`story` for Reels, TikTok, Shorts) |\n| `--tone` | `default`, `polished`, `yc-parody`, `chaotic`, `deadpan`, `cinematic`, `app-store`, or freeform (\"fake Series A launch from 2016\") | inferred |\n| `--duration` | seconds (video) | about 20 (15–25) |\n| `--no-music`, `--no-sfx` | flags (video) | music and effects on |\n| language | the user's language | the language the user writes in |\n\nA freeform tone maps to the nearest preset for pacing and structure, but keep the user's words in the plan.\n\n## Output folder\n\nEach piece lives in its own folder: `tilecast/<slug>/` with `<slug>.html`, its assets (`assets/`, `audio/`), `plan.md`, and `export/` for renders. If the folder exists and the user asked for something new, use `tilecast/<slug>-YYYY-MM-DD-HHmmss/`. Never write outside the project.\n\n## Step 1: Inspect\n\nGather the material. Only the source changes; the questions after the table are the same for every input.\n\n| Input | Where the material comes from |\n|---|---|\n| A brief (\"jazz concert Saturday 7 pm in the park, free entry\") | The user's words. Everything the piece states must come from them. |\n| The current project (\"make a launch video\", \"/brag this\") | The code: main page, styles (exact colors, fonts), README, routes, key components. Find the product **in use**: entry → key action → result. |\n| A website URL | The site as a visitor sees it: copy, colors, fonts, logo, screenshots of its real UI. Save what you use into the piece's folder. |\n| Files (photos, logo, menu, price list) | Read them, copy what you use into the piece's folder. |\n\nThen answer, in a few words each:\n\n1. What is it, in one sentence?\n2. Who is it for, and what should they do after seeing it (come, buy, sign up, share)?\n3. The one thing a stranger must remember.\n4. The facts: date, time, place, price, link, contact. **Only the ones you were given.** Never invent a price, date, address, phone number, URL, testimonial or statistic. If a fact the piece needs is missing, leave it out or ask.\n5. The real material to show: product UI, photos, logo, brand colors and fonts.\n6. The hook: the single image, word or motion that stops the scroll.\n7. The tone.\n8. The formats, and for video the duration.\n9. The one-line caption someone would post with it.\n\n**Gate:** you can answer all nine.\n\n## Step 2: Plan\n\nWrite `tilecast/<slug>/plan.md`, one page:\n\n- **Concept:** the idea in one line. \"The date is so big it becomes the poster.\" \"The app's own chat bubble tells the story.\" Not \"a modern, clean poster\".\n- **Hierarchy:** what is read first, second, third. At most three levels.\n- **Layout:** a quick sketch in words for each format (what goes where, what is huge).\n- **Palette:** 2–4 colors with hex values, from the brand when there is one.\n- **Type:** a display family and a text family from the bundled fonts (`assets` `list_fonts`), with the weights.\n- **Imagery:** what the picture is: the real product, the user's photo, or something you draw in CSS and SVG. See [references/design.md](references/design.md).\n\nFor a video, also:\n\n- **Storyboard:** scenes with start times, durations, the exact on-screen text, the motion, and the transition into the next scene. Shape: Hook (2–3 s) → Reveal (2–4 s) → 2–3 highlights → Payoff with logo and call to action (2–4 s). Durations sum to the target.\n- **Reading budget:** every line people must read gets about 0.3 s per word fully visible and still (0.8 s minimum; the hook more). If a scene has more text than its length allows, cut the text or split the scene; never speed it up.\n- **Audio:** music style and where its strong cues land (the drop on the reveal, the final hit on the logo), and the few effects that mark cuts and big entrances. See [references/audio.md](references/audio.md).\n\n**Gate:** `plan.md` exists. For a video, the scene durations add up to the target and every line fits its reading budget.\n\n## Step 3: Compose\n\n**Read:** [references/design.md](references/design.md) every time; [references/motion.md](references/motion.md) for any video or animated piece; [references/runtime.md](references/runtime.md) for the composition contract; [references/tones.md](references/tones.md) for the chosen tone.\n\nWrite `tilecast/<slug>/<slug>.html` from scratch: one self-contained page, the canvas is the viewport, sizes relative to the canvas so the same file serves every format you planned. The plan is the contract: if a better idea comes up while composing, update `plan.md` so the concept and the page still agree. Put `<meta name=\"tilecast:formats\" content=\"…\">` in it; for a video also `tilecast:duration`, `tilecast:scenes` and, once you know it, `tilecast:poster`.\n\nFor video audio: `assets` `make_music` with the planned style and duration, or the user's own track analyzed with `analyze_music`; then retime the big moments to the strong cues; add effects with `make_sfx` or `add_sfx`.\n\n## Step 4: Look and check\n\n1. `preview` the composition. Look at the image properly: for a static piece every format side by side, for a video a filmstrip with every scene settled and every cut mid-transition.\n2. Judge it like an art director:\n   - **Squint test:** blur your eyes. Is the headline the first thing, and does the page have one clear shape?\n   - **Three-second test:** could a stranger say what, when and where after three seconds?\n   - Is everything aligned to something? Are the margins generous and equal? Does any format look cramped or empty?\n   - Would a top studio post this? If it looks like \"an AI made this\", find out why (see the anti-patterns in design.md) and fix it.\n3. `check`: the design critic. It measures text off the canvas or cut off, collisions, tiny text, contrast on the real pixels, missing fonts and images, and for video the reading time of every line across the whole timeline, flashes, an empty opening or ending, and missing audio.\n4. Fix and repeat until `check` reports no ✗ and the preview looks like something you would sign. Treat warnings as design feedback: fix them unless you can say why the design wants it that way.\n\n**Gate:** `check` passes with zero errors, and you have looked at every format (and for video, every scene and every cut).\n\n## Step 5: Render and deliver\n\n- **Images:** `render_image`. Print formats come out at 300 dpi as PNG plus a PDF of the exact paper size; social formats at their native size.\n- **Video:** `render_video` renders the final MP4 at 30 fps with the music and effects mixed. The best settled frame becomes frame 0 and is also saved as `.jpg`, so every platform's thumbnail shows it: set `tilecast:poster` to your strongest settled moment (the hook line, the reveal, or the final logo), or let Tilecast pick the moment with the most settled large type. `quality: \"draft\"` renders a quick half-size version first when the user wants to see motion before the final.\n- **Share copy:** write `tilecast/<slug>/share-copy.txt`: 1–3 sentences, postable as-is, specific, in the tone. No \"excited to share\".\n- **Tell the user** where the files are, the idea in one sentence, and offer one next step: another tone, another format, or re-rolling a scene or the music.\n\n## Laws\n\nThese apply to every piece, whatever the tone.\n\n- **One idea.** Every piece has one concept, one focal point and one thing to remember.\n- **Specific.** It must feel made for this exact message: the user's own words, facts, product and colors. Generic lines (\"elevate your experience\", \"streamline your workflow\") are banned.\n- **Show the thing.** Use the real product UI, the real photo, the real menu. Reuse the project's components, CSS and assets instead of drawing a lookalike. Never abstract filler.\n- **Hierarchy you can see from across the room.** Headline huge, facts clear, details quiet. Three sizes, not seven.\n- **Readable.** Contrast on the real pixels, nothing cut off, nothing too small for the format. In video, pace comes from motion and cuts, never from pulling text away early: fast in, then hold.\n- **The hook is everything.** On a poster, the thing you see first from a distance; in a video, the first two seconds.\n- **Short.** Posters say less than you think. Videos run 15–25 seconds; 18–22 is the sweet spot.\n- **Every frame postable.** Any still of a video, and any format of a poster, is worth sharing on its own.\n- **Honest.** Only facts you were given. Humor comes from the subject, not from trying.\n\n## Tones\n\n| Tone | Feel | Posters | Video pacing and cuts | Music |\n|---|---|---|---|---|\n| `default` | Playful, clean, postable | Bold type, one bright accent | 4–5 scenes, snappy moves, soft transitions | `upbeat` |\n| `polished` | Serious, elegant, restrained | Editorial serif, air, fine rules | 3–4 scenes, long holds, soft fades | `chill` |\n| `yc-parody` | Deadpan startup launch, played straight | Keynote minimal, one huge claim | 4–5 scenes, one claim each, hard cuts | `minimal` or `upbeat` |\n| `chaotic` | FAST, LOUD, ALL CAPS | Clashing colors, giant type, stickers | 6–8 scenes, some under 2 s, zoom and flash cuts | `driving` |\n| `deadpan` | Calm, dry, nothing is a joke | Vast empty space, small type | 3–4 scenes, one word at a time, slow fades | `minimal` |\n| `cinematic` | Trailer-scale, epic claims | Dark, dramatic light, huge title | 4–5 scenes, big type, dramatic wipes | `cinematic` |\n| `app-store` | Clean feature cards | Product front and center, soft shadows | 4–6 scenes, smooth slides | `upbeat` or `chill` |\n\nFull definitions: [references/tones.md](references/tones.md).\n\n## Credits\n\nThe video workflow, the creative laws and the tone presets are adapted from [/brag](https://github.com/latent-spaces/brag) by Shunit Haviv Hakimi (MIT license). The recorded sound effects are by [Kenney](https://kenney.nl) (CC0).\n",
+	"../plugin/skills/tilecast/references/audio.md": "# Audio\n\nA silent video feels unfinished. By default every video gets one music bed and a small number of well-timed effects, unless the user turns them off or silence is the stronger creative choice (some `deadpan` pieces). Sound is written with the edit: effects land on the frame the motion lands.\n\n## Music\n\n`assets` `make_music` generates a music bed for the exact length of the video, free to use, and tells you where its beats and strong moments are:\n\n```\nassets { action: \"make_music\", style: \"upbeat\", duration: 18, dir: \"tilecast/launch/audio\" }\n```\n\n| Style | Tempo | Feel | Tones |\n|---|---|---|---|\n| `upbeat` | 118 | Bright four-on-the-floor pop groove with a plucked arpeggio | `default`, `app-store`, launches |\n| `chill` | 88 | Warm electric piano, soft swung beat, sub bass | `polished`, food, lifestyle |\n| `cinematic` | 90 | Big drums, pulsing strings, risers and booms | `cinematic`, dramatic reveals |\n| `driving` | 124 | Dark rolling bass, tight hats | `chaotic`, tech, speed |\n| `minimal` | 100 | Soft kick, ticks, a marimba motif | `deadpan`, `yc-parody`, explainers |\n\nOptions: `bpm` (60–180), `key` (\"C\", \"F#\", \"Bb minor\", \"Am\"), `seed` for another variation, `name` for the file name. It writes `<name>.wav` and `<name>.cues.json`.\n\nThe arrangement always has the same shape, so the edit can rely on it:\n\n- **start (0 s):** a soft accent; the hook lands here.\n- **drop (about 2–3 s):** the full beat comes in; put the **reveal** here.\n- **breakdown and return** (in longer pieces, 8 bars or more: about 17 s at 118 BPM): the beat drops out for a bar and comes back; a scene change or highlight on the return.\n- **final hit:** the last downbeat at least 1.4 s before the end; land the **logo or payoff** here. The music rings out under the final frame.\n\nPlace it: `<audio data-tilecast src=\"audio/music-upbeat.wav\" data-start=\"0\" data-volume=\"0.8\"></audio>`.\n\nIf the user has their own track, copy it into the piece's folder and use it instead (they know its rights). `assets` `analyze_music` with `file` finds its tempo, beats, bar starts, an energy curve per bar (▁…█) and the strong cues (where the energy jumps, the hardest hits), and saves them next to the track as `.cues.json`. Pick the stretch of the song whose energy curve fits the storyboard, start it there with `data-trim`, and shift the cue times by the same amount. For free-time or ambient music the grid is approximate; follow the energy curve.\n\n## Sync (beat lock)\n\n- Move major reveals to within ±0.15 s of a strong cue (the drop, the return, the final hit). One to three locks per video.\n- Snap sequential accents (cards arriving, stats, icons) to consecutive beats from `beats`; for lines people read, every other beat.\n- Readability and the story come first; ignore a cue that would cut a line short.\n- Note the locks in CSS comments: `/* beat-locked 2.03 drop */`.\n\n## Effects\n\nGenerated, WAV (`assets` `make_sfx`, names plus `dir`):\n\n| Name | Use | Placement |\n|---|---|---|\n| `whoosh` | camera move, push, big transition | starts ~0.45 s before the cut (it peaks at 60%) |\n| `swipe` | card, panel or word sliding in | starts ~0.15 s before it lands |\n| `riser` | tension into a reveal (`duration` sets its length) | ends exactly on the hit: `data-start` = hit − duration |\n| `impact` | title slam, logo hit | on the landing frame |\n| `sub-drop` | weight under a reveal or drop | on the reveal |\n| `pop` | badge, like, element popping in | on the pop |\n| `tick` | counters, typing, list items | per item, quiet (0.2–0.35) |\n| `shimmer` | magic moment, success, logo glint | on the glint |\n\nRecorded (Kenney, CC0; `assets` `list_sfx` and `add_sfx`): `soft-hit`, `soft-hit-2`, `soft-hit-3` (warm thuds, the safest hits), `bell-ring` (logo payoff, once), `bell-short`, `bong`, `click`, `click-2`, `tap`, `rollover`, `switch`, `drop`, `card-slide`, `card-place`, `chips`, `glitch`.\n\n## Mixing\n\n- Music at `data-volume` 0.7–0.85, effects at 0.3–0.6 under it. The tool mixes everything and keeps the peak under 0 dB.\n- One hero sound per scene; repeated small sounds (ticks, clicks) quieter and not on every single item.\n- Clicks on the press, hits on the landing, whooshes ahead of the move.\n- Let the final hit and the music ring over the last frame; don't cut sound off with a hard stop.\n- Options on every `<audio data-tilecast>`: `data-start` (s), `data-volume` (0–1+), `data-fade-in`, `data-fade-out` (s), `data-trim` (skip the file's first seconds), `data-duration` (play only this long), `loop`.\n",
 	"../plugin/skills/tilecast/references/design.md": "# Design: posters, announcements and social graphics\n\nHow to compose a still that looks like a studio made it. Everything here is a way of thinking, not a layout to copy: pick what serves this message's one idea.\n\n## The canvas\n\n- The viewport **is** the canvas. `poster-a4` is 1240×1754 CSS px (exported at 2× = 300 dpi), `square` 1080×1080, `portrait` 1080×1350, `story` 1080×1920, `landscape` 1920×1080, `og` 1200×630.\n- Size everything relative to the canvas so one file works in every format: `vmin` for type and spacing, `vw`/`vh`/`%` for placement, `clamp()` to keep extremes sane. `html, body { margin: 0; width: 100%; height: 100%; overflow: hidden }`.\n- Switch layouts per shape with media queries: `@media (aspect-ratio > 1.2)` for landscape and banners, `@media (aspect-ratio < 0.62)` for stories. A story is not a shrunk poster: re-stack it.\n- **Safe margins:** at least 6% of the shorter side on every edge (≈ 65 px on a 1080 square). Print: keep text 5 mm (≈ 60 px on A4) from the trim. Stories: keep text out of the top 12% and the bottom 18%, where the app's own UI sits.\n- A spacing scale beats ad hoc numbers: `--u: 1vmin`, then use 2u, 3u, 5u, 8u, 13u.\n\n## Composition\n\nDecide what is **huge**. A poster read from across a street has one dominant element that takes 30–60% of the canvas: the headline, the number, the date, the product, the photo. Everything else is small and organised around it.\n\nArchetypes to think with (combine and break them; never fill them in like a form):\n\n- **Type as image.** The headline set so big it is the picture: cropped at the edges, stacked word per line, one word in italic or in the accent color.\n- **The number.** \"-40%\", \"12.10\", \"49 zł\", \"3×\" as the hero; the rest is a caption to it.\n- **Image dominant.** A real photo or product shot fills 60–100% of the canvas; type sits on a calm area or on a solid band, never on a busy part.\n- **Split.** Two fields: color and image, or two colors, meeting on a straight or diagonal edge. Strong for before/after and comparisons.\n- **Swiss grid.** A visible grid of 4–12 columns, flush-left type, hairline rules, numbers like \"01\" and \"02\". Serious, informative, great for programs and schedules.\n- **Frame.** A border or inset panel with generous margin; calm, premium, invitation-like.\n- **Diagonal energy.** Rotated type or bands (-8° to -15°), for sport, sales and chaos.\n- **Object and orbit.** One central object (logo, product, icon drawn huge) with small type placed around it.\n\nUse CSS grid with named areas for structure, `position: absolute` for deliberate overlaps, and asymmetry: a left-aligned column with a big empty right side reads as confident; everything centered reads as a greeting card.\n\n## Hierarchy\n\n- Three levels, not more: **headline** (10–24 vmin), **key facts** (3.5–6 vmin), **details** (2.2–3 vmin). Neighbouring levels differ by at least 2.5× in size or by weight and color.\n- The reading path follows the story: what → when/where → how (call to action). On social formats the call to action is short and concrete (\"Bilety: jazzwparku.pl\", \"Pierwsza kawa gratis do 12:00\"), only with facts you were given.\n- Group related facts tightly; separate groups with space, not with boxes.\n\n## Typography\n\n- Pair a display face with a text face from the bundled families (`assets` `list_fonts`), or use one family in two weights. Good pairs: Bricolage Grotesque + Inter, Fraunces + Inter, Instrument Serif + Instrument Sans, Anton + Space Mono, Unbounded + Manrope, Playfair Display + Manrope, Archivo Black + Archivo, Syne + Space Grotesk.\n- Display type: heavy weight (700–900 for variable families), line-height 0.85–0.95, letter-spacing -0.02em to -0.05em at large sizes. Condensed faces (Anton, Bebas Neue, Oswald) stack words into tall blocks.\n- Labels and small caps: uppercase, letter-spacing 0.08–0.14em, 600 weight.\n- `text-wrap: balance` for headlines, `text-wrap: pretty` for sentences; break headlines by meaning with `<br>`, not by accident. No single orphan word on the last line of a headline.\n- Numbers: `font-variant-numeric: tabular-nums` in lists and schedules; lining figures in big numbers.\n- Italic or a second color for the one word that carries the emotion (\"Jazz *w parku*\"), not for decoration.\n- Polish and other accented text: every bundled family covers Latin Extended (except Permanent Marker, Latin only). The critic flags missing glyph fonts.\n- Tight leading and accented capitals don't mix: at line-height below 1, the accents of Ż, Ź, Ś, Ć, Ń, Ó (and É, Ü…) run into the line above and can vanish behind it. Give lines with accented capitals at least 1.0–1.1, and look at them in the preview.\n- Optical alignment: very large type needs a small negative left margin (about -0.04em) to line up with smaller text below it.\n\n## Color\n\n- 60/30/10: one dominant field, one secondary, one accent for the single most important thing. Tinted neutrals (#14110f, #f4efe6) look richer than pure black and white.\n- Use the brand's exact colors when there are any; build the rest from them (a darker shade for text, a light tint for the background).\n- Contrast: body text 4.5:1, large text 3:1 against what is really behind it. The critic measures this on the rendered pixels, including photos and gradients.\n- Palettes that work (start here, then adjust to the message):\n  - Tomato on cream: `#f4efe6` `#e8452c` `#1d1a17`\n  - Ink and acid: `#101014` `#d4ff3a` `#f2f2f2`\n  - Night jazz: `#0f1a2b` `#ffb347` `#ff5e3a` `#f4efe6`\n  - Forest and sand: `#1f3a2e` `#e9dcc3` `#c8743a`\n  - Riso pink and blue: `#f7f1e8` `#ff4f9a` `#2b59ff` (overlap with `mix-blend-mode: multiply`)\n  - Clinical: `#ffffff` `#0b5cff` `#0d1321` `#e8eef9`\n  - Candy: `#ffe45e` `#ff6ba6` `#7b2ff7` `#1b1b1b`\n  - Dark luxury: `#0e0d0b` `#c9a86a` `#efe8dc`\n  - Brutalist: `#e9e9e4` `#111111` plus one of `#ff3b00` / `#0038ff`\n  - Pastel calm: `#eef3ee` `#b8d8c8` `#2f4b3f` `#f2b8a2`\n\n## Imagery without stock photos\n\nUse the real thing first: the user's photos, the product UI (rebuild it with the project's real components and CSS, or screenshots of it), the logo. Otherwise draw, with the browser's full toolbox:\n\n- **Big shapes:** circles, arcs, pills and blobs (`border-radius`), cropped by the canvas edge so they feel large.\n- **Gradients:** layered `radial-gradient`s make mesh gradients; `conic-gradient` for sunbursts; add grain so they don't look plastic.\n- **Grain:** an SVG `feTurbulence` noise as a data URL in a full-canvas overlay at 5–10% opacity with `mix-blend-mode: overlay` or `multiply`.\n- **Halftone and patterns:** `radial-gradient` dot grids, `repeating-linear-gradient` stripes, checkerboards.\n- **Duotone photos:** `filter: grayscale(1) contrast(1.1)` plus a colored layer with `mix-blend-mode: multiply` or `screen`.\n- **Type as texture:** a word repeated in outline (`-webkit-text-stroke`) behind the headline; text filled with an image or gradient (`background-clip: text`). Mark decorative text `aria-hidden=\"true\"` so the critic doesn't judge it as copy.\n- **Icons as illustration:** a Lucide icon (`assets` `find_icons`, `get_icons`) drawn huge with a thin stroke (1–1.5) reads as a graphic, not as clip art. Never icons in little colored circles.\n- **Product mockups:** a phone or browser frame drawn in CSS around the real UI, with a soft layered shadow.\n\nPut a scrim (a gradient from transparent to the background color) under text on photos, or put the text on a solid band.\n\n## Details that read as professional\n\n- Hairline rules (1–2 px) and small labels (\"NO. 03\", \"SOBOTA\", \"WSTĘP WOLNY\") organise information.\n- A rotated sticker or badge (-8° to -12°) for an offer or a price, used once.\n- Consistent corner radii (all sharp, or all the same radius).\n- Layered shadows for depth: `0 1px 2px rgba(0,0,0,.08), 0 12px 40px rgba(0,0,0,.18)`; never a heavy black drop shadow on text.\n- Real content only. No lorem ipsum, no \"Your Company\", no placeholder faces.\n\n## Print\n\n- A4 and A3 posters and A5 flyers export as 300 dpi PNG plus a PDF of the exact paper size. There is no bleed: if a print shop needs 3 mm bleed, extend backgrounds past the canvas edge in the design and tell the user.\n- Dark, full-bleed backgrounds print beautifully but use a lot of ink; mention it for home printing.\n\n## Anti-patterns: the \"an AI made this\" tells\n\n- Purple-to-blue gradients on everything, glassmorphism cards, neon glow on dark.\n- Everything centered, with an emoji on top.\n- Icons in colored circles, generic 3D blobs, stock-looking illustrations.\n- Five font sizes and three fonts; all text the same weight.\n- Drop shadows or outlines on text to rescue contrast.\n- Text on a busy photo without a scrim.\n- Tiny text crammed in the corners; margins that differ on each side.\n- Invented facts, fake testimonials, \"Lorem\", \"Company Name\".\n- The headline is a slogan that fits any business.\n\n## Before you run check\n\n- Squint: the headline is the first thing and the page has one clear shape.\n- Three seconds: what, when, where and what to do are clear.\n- Every element aligns with something; margins are generous and equal.\n- Every format is composed, not shrunk: look at each one in `preview`.\n",
 	"../plugin/skills/tilecast/references/motion.md": "# Motion: promo, launch and announcement videos\n\nA Tilecast video is a web page whose every frame is a function of time. You write the scenes in HTML and CSS, schedule them with absolute times, and Tilecast captures 30 frames per second and mixes the sound. This file is how to make that feel like a real launch video: fast, readable, alive.\n\n## Structure\n\n```\nHook (2–3 s) → Reveal (2–4 s) → 2–3 sharp highlights (3–5 s each) → Payoff and call to action (2–4 s)\n```\n\n- **Hook:** the first frame already has something on it (never a blank fade-in). A huge word slamming in, the product mid-action, a bold question, a number counting. It decides whether anyone keeps watching.\n- **Reveal:** what it is, by name, landing on the music's drop.\n- **Highlights:** the product in use (entry → key action → result) or the two or three facts that matter. One idea per scene.\n- **Payoff:** logo or name, the one-line promise and the call to action (URL, date, place), held still for at least 2 seconds, landing on the music's final hit.\n- 15–25 seconds total; 18–22 is the sweet spot. Count the scene durations.\n\n## Reading time\n\nPace comes from motion and cuts, never from pulling text away early.\n\n- A line people must read stays fully visible **and still** for about 0.3 s per word: 0.8 s for a short label, 1.2 s minimum for a sentence, more for the hook.\n- Fast in, then hold: an entrance of 0.3–0.6 s, a hold, an exit of 0.2–0.4 s.\n- Too much text for a scene? Cut words or split the scene. A 4 s scene carries two or three short reads, not six.\n- Sequential text (list items, stats) on a fast beat: reveal on every other beat, or reveal them quickly and hold the whole set.\n- `check` measures every line through the whole timeline and flags anything too short or flashing by.\n\n## Timing and easing\n\nNever move things linearly (linear is only for slow continuous drifts). Use these curves:\n\n| Use | CSS | JS (`tilecast.ease`) |\n|---|---|---|\n| Entrances, landing | `cubic-bezier(.16, 1, .3, 1)` | `outExpo` |\n| Softer entrances | `cubic-bezier(.33, 1, .68, 1)` | `out` |\n| Moves across the screen | `cubic-bezier(.65, 0, .35, 1)` | `inOut` |\n| Exits | `cubic-bezier(.7, 0, .84, 0)` | `inExpo` |\n| Playful pop with overshoot | `cubic-bezier(.34, 1.56, .64, 1)` | `outBack` |\n\n- Stagger items 40–90 ms apart; words 50–70 ms; letters 20–35 ms.\n- Overlap: the next element starts before the previous one finishes (at 60–70% of it).\n- Lead with the biggest element, then the details.\n- One hero motion per scene; everything else supports it.\n\n## Schedule everything with absolute times\n\nThe renderer may jump straight to any moment (parallel capture, the poster frame), so every frame must be a pure function of time. Declare all motion up front with absolute delays from the start of the video, not with timers or class toggles.\n\n**Scene windows.** Each scene fades or cuts in at its start and out at its end:\n\n```css\n.scene { position: absolute; inset: 0; opacity: 0; }\n/* in at 6.0 s, out at 10.6 s */\n#s3 { animation: in .01s 6s both, out .01s 10.6s forwards; }\n@keyframes in { from { opacity: 0 } to { opacity: 1 } }\n@keyframes out { from { opacity: 1 } to { opacity: 0 } }\n```\n\nWith `both` the scene is hidden before 6 s and visible after; the later `out` animation (with `forwards`, not `both`) takes over at 10.6 s. The first scene has no `in`: give it `opacity: 1` so frame 0 is never blank. Use a longer duration for fades (`.4s`), or animate `clip-path` or `transform` for wipes and pushes. Never give a scene container `both` on a keyframe that ends visible and nothing to hide it again: it stays on top for the rest of the video.\n\n**Elements inside a scene** get delays relative to the video start:\n\n```css\n#s3 h2 { animation: rise .6s cubic-bezier(.16,1,.3,1) 6.15s both; }\n#s3 li { animation: rise .5s cubic-bezier(.16,1,.3,1) calc(6.5s + var(--i) * 90ms) both; }\n```\n\nKeep a timeline comment at the top of the style block (`/* 0 hook · 2.03 reveal (drop) · 6.1 feature · 10.2 feature · 16.27 logo (final hit) */`) and set `<meta name=\"tilecast:scenes\" content=\"0 2.03 6.1 10.2 16.27\">` so previews show every scene.\n\n**JavaScript motion** (counters, typing, cursors, paths, anything computed) goes in `tilecast.onFrame((t) => …)`, computed from `t` alone:\n\n```js\nconst count = document.querySelector('.count');\nconst typed = document.querySelector('.typed');\nconst text = typed.dataset.text;\ntilecast.onFrame((t) => {\n  count.textContent = Math.round(tilecast.tween(7.2, 1.4, 0, 12480, 'outExpo')).toLocaleString('pl-PL');\n  typed.textContent = text.slice(0, Math.floor(tilecast.tween(3.1, 1.2, 0, text.length, 'linear')));\n});\n```\n\n`tilecast.progress(start, duration, easing)` gives eased 0..1; `tilecast.tween(start, duration, from, to, easing)` gives a value; `tilecast.random(seed)` gives the same random sequence every frame.\n\n## Techniques\n\n**Line mask reveal:** the line slides up from behind an invisible edge.\n\n```css\n.line { display: block; overflow: hidden; }\n.line > span { display: block; animation: up .7s cubic-bezier(.16,1,.3,1) 2.1s both; }\n@keyframes up { from { transform: translateY(105%) } }\n```\n\n**Word stagger:** wrap words in spans with `style=\"--i: 0\"`, `--i: 1` … and delay each with `calc(start + var(--i) * 60ms)`.\n\n**Slam:** `from { transform: scale(1.35); opacity: 0 }` over 0.35–0.45 s with the landing curve, and a soft hit on the exact frame it lands.\n\n**Highlighter:** `background: linear-gradient(var(--accent), var(--accent)) no-repeat 0 85% / 0% 40%` animated to `100% 40%`.\n\n**Camera:** give every scene a slow push, `transform: scale(1)` → `scale(1.06)` across its duration with `inOut`, so even holds feel alive. Parallax: background layers move slower than the foreground.\n\n**Product in use:** rebuild the real UI (the project's own components and CSS), then act on it: a cursor drawn in SVG glides with `inOut`, presses (scale .9 for 80 ms) with a click sound, a panel slides open, a result counts up, a toast pops. This is the strongest material a launch video has.\n\n**Background life:** a slowly drifting gradient, grain, a rotating shape (infinite CSS animations are fine: they are positioned by time too).\n\n**Texture text:** code scrolling behind a scene or a ticker of words is texture, not copy: mark it `aria-hidden=\"true\"` so the reading-time check ignores it. Everything the viewer must read still follows the reading budget.\n\n## Transitions\n\n- **Hard cut on a beat** with a soft hit: the default for energy.\n- **Wipe:** the next scene's `clip-path: inset(0 100% 0 0)` → `inset(0)` over 0.4–0.5 s.\n- **Push:** the old scene moves out (`translateX(-30%)`, fading) while the new one moves in from the right.\n- **Zoom through:** the old scene scales to 1.4 and fades while the new one scales from 0.9 to 1.\n- **Dip:** out to the background color for 0.15 s, then in.\n- **Match cut:** an element (the logo, a number, a phone) continues from one scene into the next in the same place.\n- Avoid a plain crossfade between two busy layouts: it makes a muddy double exposure. Stagger it (old out, then new in) or dip through the background.\n- Put a whoosh or swipe on moves and pushes, starting about 0.4 s before the cut.\n\n## Sync with the music\n\n`assets` `make_music` returns the beat grid and the strong cues. Build the edit on them:\n\n- The hook lands at 0; the reveal on the **drop**; scene changes on downbeats; the logo on the **final hit**. Move a major reveal to within ±0.15 s of a strong cue; that is where it feels expensive.\n- Sequential accents (cards, dots, icons) on consecutive beats; readable lines on every other beat.\n- Mark the locks in your CSS comments (`/* beat-locked 2.03 drop */`).\n- Readability and story come first: never cut a line short to hit a beat.\n\n## Formats\n\n- `landscape` 1920×1080 for YouTube, X, LinkedIn, websites. `story` 1080×1920 for Reels, TikTok and Shorts: big type, centered action, nothing important in the top 12% and bottom 18%. `square` or `portrait` for feeds.\n- A vertical video is recomposed, not shrunk: stack elements, make type bigger relative to width.\n\n## The ending and the poster\n\n- Hold the final frame (name, promise, call to action) at least 2 seconds; let the music ring out under it.\n- Set `tilecast:poster` to the strongest settled frame: the hook line, the reveal or the final logo, text fully in. It becomes frame 0 and the thumbnail everywhere.\n\n## Checklist\n\n- [ ] The first frame is not empty and the hook reads in 2 seconds.\n- [ ] Every scene has one idea and one hero motion.\n- [ ] Every readable line holds ~0.3 s per word, still and fully visible (`check` agrees).\n- [ ] Transitions are staggered or cut, never muddy crossfades.\n- [ ] The reveal lands on the drop and the logo on the final hit.\n- [ ] The final frame holds 2 s or more with the call to action.\n- [ ] Looked at the filmstrip: every scene settled and every cut mid-transition.\n",
 	"../plugin/skills/tilecast/references/runtime.md": "# Runtime: the composition contract\n\nA composition is one `.html` file inside the project. Tilecast opens it in headless Chrome at the format's size, controls its clock, and captures it. Anything a browser can draw works: CSS, SVG, canvas, images, video, web fonts in the project.\n\n## Skeleton: a poster\n\n```html\n<!doctype html>\n<html lang=\"pl\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"tilecast:formats\" content=\"poster-a4 square story\">\n<title>Jazz w parku</title>\n<style>\n  :root { --bg: #0f1a2b; --ink: #f4efe6; --accent: #ffb347; --u: 1vmin; }\n  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }\n  body { background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; position: relative; }\n  h1 { font: 800 calc(15 * var(--u)) / .9 'Fraunces', serif; letter-spacing: -0.03em; margin: 0; }\n  /* layouts per shape */\n  @media (aspect-ratio > 1.2) { /* landscape, banners */ }\n  @media (aspect-ratio < 0.62) { /* stories */ }\n</style>\n</head>\n<body>\n  <h1>Jazz<br><em>w parku</em></h1>\n</body>\n</html>\n```\n\n## Skeleton: a video\n\n```html\n<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"tilecast:formats\" content=\"landscape\">\n<meta name=\"tilecast:duration\" content=\"18\">\n<meta name=\"tilecast:scenes\" content=\"0 2.03 6.1 10.17 16.27\">\n<meta name=\"tilecast:poster\" content=\"16.9\">\n<style>\n  /* 0 hook · 2.03 reveal (drop) · 6.1 feature · 10.17 feature (return) · 16.27 logo (final hit) */\n  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0d0d10; color: #fff; }\n  .scene { position: absolute; inset: 0; opacity: 0; }\n  #s1 { opacity: 1; animation: out .3s 1.75s forwards; } /* the first scene is on screen from frame 0 */\n  #s2 { animation: in .3s 2.03s both, out .3s 5.8s forwards; }\n  /* … */\n  @keyframes in { from { opacity: 0 } to { opacity: 1 } }\n  @keyframes out { from { opacity: 1 } to { opacity: 0 } }\n</style>\n</head>\n<body>\n  <section class=\"scene\" id=\"s1\">…</section>\n  <section class=\"scene\" id=\"s2\">…</section>\n  <audio data-tilecast src=\"audio/music-upbeat.wav\" data-start=\"0\" data-volume=\"0.8\"></audio>\n  <audio data-tilecast src=\"audio/impact.wav\" data-start=\"16.27\" data-volume=\"0.5\"></audio>\n  <script>\n    tilecast.onFrame((t) => { /* computed motion, from t only */ });\n  <\/script>\n</body>\n</html>\n```\n\n## Meta tags\n\n| Tag | Meaning |\n|---|---|\n| `tilecast:formats` | Default formats, space separated: `poster-a4 poster-a3 flyer-a5 square portrait story landscape og` or `WIDTHxHEIGHT` |\n| `tilecast:duration` | Makes it a video: length in seconds |\n| `tilecast:fps` | Frames per second (default 30) |\n| `tilecast:scenes` | Scene start times; previews and checks show each scene settled and each cut |\n| `tilecast:poster` | The moment used for frame 0, the thumbnail and still renders |\n\nStills of a piece without `tilecast:poster` are taken when its entrance animations have finished (for videos, at 60% of the duration).\n\n## Time\n\nTime is virtual: the renderer sets it for every frame, and every frame must be a pure function of it.\n\n- **CSS animations and transitions** are positioned exactly at each frame's time. Schedule with absolute delays from the start (`animation: rise .6s ease 6.15s both`). Infinite animations are fine.\n- **Web Animations** (`element.animate()`), created at load with a `delay`, behave the same.\n- **`requestAnimationFrame`**, `setTimeout`, `setInterval`, `Date` and `performance.now()` follow the render clock. Timers fire in order as time passes, but the renderer can jump straight to a late frame, so prefer declared animations and `onFrame` over chains of timers.\n- **`tilecast.onFrame((t) => …)`** runs on every frame with `t` in seconds, after CSS is positioned; it may be async. Compute everything from `t`, never incrementally (\"add 1 each frame\" breaks when frames are skipped or rendered in parallel).\n- Helpers: `tilecast.time` (seconds), `tilecast.progress(start, duration, easing)` (eased 0..1), `tilecast.tween(start, duration, from, to, easing)`, `tilecast.ease` (`linear`, `in`, `out`, `inOut`, `outQuart`, `outExpo`, `inExpo`, `inOutExpo`, `outBack`, `spring`), `tilecast.random(seed)` (a seeded generator; `Math.random()` differs per frame and makes things flicker).\n\n## Fonts\n\nBundled families work by name, offline, with Latin Extended accents: Inter, Bricolage Grotesque, Fraunces, Unbounded, Syne, Archivo, Space Grotesk, Manrope, Instrument Sans, Playfair Display, Oswald, JetBrains Mono, Fredoka, Caveat (variable, any weight in range), and Anton, Bebas Neue, Archivo Black, Instrument Serif, DM Serif Display, Space Mono, Permanent Marker (static). `assets` `list_fonts` lists weights and italics.\n\nAny other font needs a file in the project and an `@font-face` rule. Never link Google Fonts or other CDNs: renders must not depend on the network.\n\n## Images, video, icons\n\n- Local files by relative path: `<img src=\"assets/photo.jpg\">`, `background-image: url(assets/texture.png)`, inline `<svg>`. Remote URLs are flagged by `check`; download what you need into the piece's folder.\n- `<video src=\"assets/demo.mp4\" muted>` follows the timeline: frame t of the composition shows the video at `t - data-start` (times `data-rate`); `loop` repeats it. Its sound is not included; add it as `<audio data-tilecast>` if needed.\n- Icons: `assets` `find_icons` then `get_icons` return Lucide SVG that follows CSS `color`.\n\n## Audio\n\n`<audio data-tilecast src=\"…\">` elements are mixed into the video: `data-start`, `data-volume`, `data-fade-in`, `data-fade-out`, `data-trim`, `data-duration`, `loop`. They never play in the page itself. Files must be local. See audio.md.\n\n## Formats and responsive layout\n\n- Design in CSS pixels at the format size; the export scales it (A4: 1240×1754 → 2480×3508).\n- One file can serve several formats: size with `vmin`/`vw`/`vh`/`%` and switch layouts with `@media (aspect-ratio …)` or `@media (orientation: portrait)`.\n- A custom size is `WIDTHxHEIGHT` in `formats`, e.g. `1500x500` for an X header.\n\n## Pitfalls\n\n- A scene container with `animation-fill-mode: both` on keyframes that end visible stays on screen forever; hide it again with a later `out` animation (see motion.md).\n- Text hidden under another opaque layer is treated as not visible by the critic; a transparent overlay (`opacity: 0`) does not hide anything.\n- `transition`s that start from a class added at load run from time 0; to schedule them, use animations with delays instead.\n- Don't rely on scrolling, hover, `:focus` or user input; there is none.\n- Don't use `Math.random()` or wall-clock time; use `tilecast.random(seed)` and `tilecast.time`.\n- Keep everything inside the canvas unless it is meant to bleed off the edge (decoration). Text that runs off is an error.\n- Text that is only texture (a giant outlined word bleeding off the edge, code scrolling behind a scene, a repeated pattern of words) gets `aria-hidden=\"true\"` or `data-texture`: the critic then skips it for overflow, contrast and reading time. Never mark text people need to read.\n",
@@ -60170,7 +60498,7 @@ function createTilecastServer(service) {
 	});
 	server.registerTool("assets", {
 		title: "Fonts, icons, sounds and formats",
-		description: "list_fonts: bundled font families and pairings. find_icons (query) and get_icons (names, size, stroke_width): Lucide icons as inline SVG. make_music (style, duration, dir, optional bpm, key, seed, name): a generated music bed as WAV with its beat grid and strong cues, free to use. make_sfx (names, dir, duration for risers): generated whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer. list_sfx and add_sfx (names, dir): recorded CC0 effects copied into the project. list_formats: canvas sizes.",
+		description: "list_fonts: bundled font families and pairings. find_icons (query) and get_icons (names, size, stroke_width): Lucide icons as inline SVG. make_music (style, duration, dir, optional bpm, key, seed, name): a generated music bed as WAV with its beat grid and strong cues, free to use. make_sfx (names, dir, duration for risers): generated whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer. analyze_music (file): tempo, beats, bar starts, energy and strong cues of the user's own track, saved as .cues.json. list_sfx and add_sfx (names, dir): recorded CC0 effects copied into the project. list_formats: canvas sizes.",
 		inputSchema: {
 			action: _enum([
 				"list_fonts",
@@ -60178,10 +60506,12 @@ function createTilecastServer(service) {
 				"get_icons",
 				"make_music",
 				"make_sfx",
+				"analyze_music",
 				"list_sfx",
 				"add_sfx",
 				"list_formats"
 			]),
+			file: string().optional().describe("analyze_music: the audio file inside the project (mp3, wav, ogg, m4a…)."),
 			query: string().optional().describe("find_icons: what the icon shows, in English, e.g. \"coffee\", \"rocket launch\"."),
 			names: array(string()).optional().describe("get_icons: icon names. add_sfx: effect names."),
 			dir: string().optional().describe("add_sfx: folder inside the project to copy into, usually next to the composition."),

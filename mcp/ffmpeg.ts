@@ -79,3 +79,26 @@ export async function ensureFfmpeg(): Promise<{ path: string; installed: boolean
   if (!existsSync(binary)) throw new Error(`Downloaded ${npmPackage()} but found no ffmpeg in it. Install ffmpeg and retry.`);
   return { path: binary, installed: true };
 }
+
+/** Decodes any audio file ffmpeg can read to mono float samples at `rate` Hz. */
+export function decodeAudio(ffmpeg: string, file: string, rate: number, maxSeconds = 600): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpeg, ['-v', 'error', '-i', file, '-t', String(maxSeconds), '-ac', '1', '-ar', String(rate), '-f', 'f32le', '-'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const chunks: Buffer[] = [];
+    let errors = '';
+    child.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+    child.stderr.on('data', (chunk: Buffer) => {
+      errors = (errors + chunk.toString()).slice(-2000);
+    });
+    child.on('error', reject);
+    child.on('exit', (code) => {
+      if (code !== 0) return reject(new Error(`Cannot decode ${path.basename(file)}: ${errors.trim().split('\n').pop() ?? `exit ${code}`}`));
+      const data = Buffer.concat(chunks);
+      const samples = new Float32Array(Math.floor(data.length / 4));
+      for (let i = 0; i < samples.length; i++) samples[i] = data.readFloatLE(i * 4);
+      resolve(samples);
+    });
+  });
+}

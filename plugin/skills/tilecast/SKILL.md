@@ -78,7 +78,7 @@ For a video, also:
 
 Write `tilecast/<slug>/<slug>.html` from scratch: one self-contained page, the canvas is the viewport, sizes relative to the canvas so the same file serves every format you planned. The plan is the contract: if a better idea comes up while composing, update `plan.md` so the concept and the page still agree. Put `<meta name="tilecast:formats" content="…">` in it; for a video also `tilecast:duration`, `tilecast:scenes` and, once you know it, `tilecast:poster`.
 
-For video audio: `assets` `make_music` with the planned style and duration (or the user's own track), then retime the big moments to its strong cues; add effects with `make_sfx` or `add_sfx`.
+For video audio: `assets` `make_music` with the planned style and duration, or the user's own track analyzed with `analyze_music`; then retime the big moments to the strong cues; add effects with `make_sfx` or `add_sfx`.
 
 ## Step 4: Look and check
 

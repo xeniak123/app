@@ -29,7 +29,7 @@ The arrangement always has the same shape, so the edit can rely on it:
 
 Place it: `<audio data-tilecast src="audio/music-upbeat.wav" data-start="0" data-volume="0.8"></audio>`.
 
-If the user has their own track, copy it into the piece's folder and use it instead (they know its rights). It has no beat grid, so ask for its BPM or place moments by the structure you planned.
+If the user has their own track, copy it into the piece's folder and use it instead (they know its rights). `assets` `analyze_music` with `file` finds its tempo, beats, bar starts, an energy curve per bar (▁…█) and the strong cues (where the energy jumps, the hardest hits), and saves them next to the track as `.cues.json`. Pick the stretch of the song whose energy curve fits the storyboard, start it there with `data-trim`, and shift the cue times by the same amount. For free-time or ambient music the grid is approximate; follow the energy curve.
 
 ## Sync (beat lock)
 

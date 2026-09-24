@@ -5,7 +5,8 @@ import path from 'node:path';
 import { flatness, formatIssues, frameIssues, timelineIssues, type Issue, type Readability } from './audit';
 import { BrowserPool, findChrome, type Browser } from './browser';
 import { loadComposition, resolveInside, Stage, stillTime, type Composition } from './composition';
-import { ensureFfmpeg } from './ffmpeg';
+import { analyzeBeats, ANALYSIS_RATE, energyBar } from './beats';
+import { decodeAudio, ensureFfmpeg } from './ffmpeg';
 import { FONT_FAMILIES } from './fonts';
 import { customFormat, FORMATS, getFormat, outputSize, type Format } from './formats';
 import { findIcons, iconSvg, ICON_COUNT } from './icons';
@@ -436,7 +437,8 @@ export class TilecastService {
   }
 
   async assets(args: {
-    action: 'list_fonts' | 'find_icons' | 'get_icons' | 'list_sfx' | 'add_sfx' | 'make_music' | 'make_sfx' | 'list_formats';
+    action: 'list_fonts' | 'find_icons' | 'get_icons' | 'list_sfx' | 'add_sfx' | 'make_music' | 'make_sfx' | 'analyze_music' | 'list_formats';
+    file?: string;
     query?: string;
     names?: string[];
     dir?: string;
@@ -486,6 +488,37 @@ export class TilecastService {
                 'Snap sequential entrances (cards, list items, words) to consecutive beats; for lines people must read, use every other beat and hold them.',
                 `Add it to the composition (path relative to the .html): <audio data-tilecast src="…/${base}.wav" data-start="0" data-volume="0.8"></audio>`,
                 'Not the right feel? Try another style, bpm or seed; or use the user\'s own track instead.',
+              ].join('\n'),
+            ),
+          ],
+        };
+      }
+      case 'analyze_music': {
+        if (!args.file) throw new Error('analyze_music needs file: the track inside the project, e.g. "promo/audio/song.mp3".');
+        const track = resolveInside(this.root, args.file);
+        if (!existsSync(track)) throw new Error(`Cannot find ${args.file}. Copy the track into the project first.`);
+        const ffmpeg = await ensureFfmpeg();
+        const found = analyzeBeats(await decodeAudio(ffmpeg.path, track, ANALYSIS_RATE));
+        const cuesFile = track.replace(/\.[^./\\]+$/, '') + '.cues.json';
+        const beat = 60 / found.bpm;
+        await writeFile(
+          cuesFile,
+          `${JSON.stringify({ file: path.basename(track), analyzed: true, bpm: found.bpm, beat: Number(beat.toFixed(4)), duration: found.duration, strong: found.strong, energy: found.energy, downbeats: found.downbeats, beats: found.beats }, null, 2)}\n`,
+        );
+        const firstBar = found.downbeats[0] ?? found.beats[0] ?? 0;
+        return {
+          content: [
+            text(
+              [
+                `${this.relative(track)}: ${seconds(found.duration)}, about ${found.bpm} BPM (a beat every ${beat.toFixed(3)}s, a bar every ${(beat * 4).toFixed(3)}s). Wrote ${this.relative(cuesFile)}.`,
+                `First beat ${seconds(found.beats[0] ?? 0)}; bars start at ${seconds(firstBar)}, ${found.downbeats.slice(1, 8).map((t) => seconds(t)).join(', ')}${found.downbeats.length > 8 ? ', …' : ''}.`,
+                `Energy by bar: ${energyBar(found.energy)} (quiet ▁ … loud █).`,
+                'Strong cues: land the big moments within ±0.15s of these:',
+                ...found.strong.map((c) => `  ${seconds(c.t).padEnd(8)} ${c.what}`),
+                found.confidence < 0.05
+                  ? 'The pulse is weak (free time, ambient or live playing): treat the grid as approximate and trust the energy curve more.'
+                  : 'Snap sequential entrances to consecutive beats; for lines people must read, use every other beat and hold them.',
+                'Trim the track to the video with data-trim (start) and data-duration, and fade it out with data-fade-out so it ends with the video.',
               ].join('\n'),
             ),
           ],

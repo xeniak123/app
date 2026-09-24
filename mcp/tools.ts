@@ -162,9 +162,11 @@ export function createTilecastServer(service: TilecastService): McpServer {
         'list_fonts: bundled font families and pairings. find_icons (query) and get_icons (names, size, stroke_width): Lucide icons as inline SVG. ' +
         'make_music (style, duration, dir, optional bpm, key, seed, name): a generated music bed as WAV with its beat grid and strong cues, free to use. ' +
         'make_sfx (names, dir, duration for risers): generated whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer. ' +
+        'analyze_music (file): tempo, beats, bar starts, energy and strong cues of the user\'s own track, saved as .cues.json. ' +
         'list_sfx and add_sfx (names, dir): recorded CC0 effects copied into the project. list_formats: canvas sizes.',
       inputSchema: {
-        action: z.enum(['list_fonts', 'find_icons', 'get_icons', 'make_music', 'make_sfx', 'list_sfx', 'add_sfx', 'list_formats']),
+        action: z.enum(['list_fonts', 'find_icons', 'get_icons', 'make_music', 'make_sfx', 'analyze_music', 'list_sfx', 'add_sfx', 'list_formats']),
+        file: z.string().optional().describe('analyze_music: the audio file inside the project (mp3, wav, ogg, m4a…).'),
         query: z.string().optional().describe('find_icons: what the icon shows, in English, e.g. "coffee", "rocket launch".'),
         names: z.array(z.string()).optional().describe('get_icons: icon names. add_sfx: effect names.'),
         dir: z.string().optional().describe('add_sfx: folder inside the project to copy into, usually next to the composition.'),

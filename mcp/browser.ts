@@ -295,7 +295,7 @@ export class Browser {
     this.exited.catch(() => undefined);
   }
 
-  static async launch(executable: string): Promise<Browser> {
+  static async launch(executable: string, extraArgs: string[] = []): Promise<Browser> {
     const profileDir = await mkdtemp(path.join(os.tmpdir(), 'tilecast-chrome-'));
     const args = [
       '--headless',
@@ -305,6 +305,15 @@ export class Browser {
       '--disable-extensions',
       '--disable-dev-shm-usage',
       '--disable-background-networking',
+      // Renders never need Google services: no component updates, sync, safe browsing pings or metrics.
+      '--disable-component-update',
+      '--disable-client-side-phishing-detection',
+      '--disable-domain-reliability',
+      '--disable-sync',
+      '--disable-default-apps',
+      '--metrics-recording-only',
+      '--no-pings',
+      '--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,CertificateTransparencyComponentUpdater,AutofillServerCommunication,InterestFeedContentSuggestions',
       '--disable-background-timer-throttling',
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
@@ -313,6 +322,7 @@ export class Browser {
       '--font-render-hinting=none',
       '--allow-file-access-from-files',
       `--user-data-dir=${profileDir}`,
+      ...extraArgs,
       'about:blank',
     ];
     // Chrome refuses to start as root without this (common in containers).
@@ -386,6 +396,26 @@ export class BrowserPool {
         this.idleTimer.unref();
       }
     }
+  }
+
+  /**
+   * The warm browser plus `count - 1` extra browser processes for heavy parallel
+   * work. Tabs of one browser share its compositor, so capturing video frames
+   * scales with processes, not tabs. The extras close when the work is done.
+   */
+  async useMany<T>(count: number, work: (browsers: Browser[]) => Promise<T>): Promise<T> {
+    return this.use(async (main) => {
+      const executable = this.executable()!;
+      const extras = await Promise.all(
+        Array.from({ length: Math.max(0, count - 1) }, () => Browser.launch(executable).catch(() => null)),
+      );
+      const browsers = [main, ...extras.filter((b): b is Browser => b !== null)];
+      try {
+        return await work(browsers);
+      } finally {
+        await Promise.all(browsers.slice(1).map((b) => b.close()));
+      }
+    });
   }
 
   async shutdown() {

@@ -152,7 +152,7 @@ Formaty: `poster-a4` (1240×1754 → 2480×3508), `poster-a3`, `flyer-a5`, `squa
 ## Ograniczenia
 
 - Muzyka z `make_music` to prosty syntezator. Brzmi jak porządny podkład, ale nie zastąpi utworu od kompozytora. Można podać własny plik.
-- Szybkość renderu zależy od komputera. Przykładowy film (20 s, 1080p, ciężkie efekty) renderował się około 85 sekund na 4 rdzeniach bez GPU. Prostsze kompozycje renderują się kilka razy szybciej.
+- Szybkość renderu zależy od komputera. Przykładowy film (20 s, 1080p, ciężkie efekty) renderuje się około 45 sekund na 4 rdzeniach bez GPU: klatki łapie kilka procesów przeglądarki naraz. Prostsze kompozycje są szybsze.
 - PDF nie ma spadów. Jeśli drukarnia ich wymaga, trzeba rozciągnąć tła poza kadr i powiedzieć o tym drukarni.
 - Krytyk mierzy to, co da się zmierzyć: czytelność, układ i czas czytania. Oceny, czy projekt jest dobry, nie zastąpi, dlatego skill każe agentowi oglądać każdy podgląd.
 

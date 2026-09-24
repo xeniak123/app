@@ -192,6 +192,14 @@ export function frameIssues(audit: AuditResult, pixels: Pixels | null, where: st
     } else if (text.clippedBy) {
       issues.push({ level: 'error', where, message: `Text is cut off by ${text.clippedBy}: ${text.desc}` });
     }
+    if (text.accentClash) {
+      const [letter, leading] = text.accentClash.split('|');
+      issues.push({
+        level: 'warning',
+        where,
+        message: `The mark on "${letter}" can run into the line above at line-height ${leading}; give lines with accented capitals at least 1.0: ${text.desc}`,
+      });
+    }
     if (text.fontSize < minFont) {
       issues.push({
         level: 'warning',

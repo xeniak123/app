@@ -78,12 +78,20 @@ export function audioGraph(tracks: AudioTrack[], duration: number): { inputs: st
   return { inputs, filter: `${chains.join(';')};${mix},alimiter=limit=0.95[aout]`, used, skipped };
 }
 
+/** How many parallel capture workers suit a clip of this many frames on this machine. */
+export function captureWorkers(frames: number): number {
+  return Math.max(1, Math.min(4, os.cpus().length, Math.ceil(frames / 24)));
+}
+
 /**
- * Captures every frame as a pure function of time in parallel tabs, then
- * encodes H.264 + AAC. Frame 0 is the poster frame, so every platform's
- * thumbnail shows the best settled moment rather than a blank first frame.
+ * Captures every frame as a pure function of time in parallel, one worker per
+ * browser process (tabs of one browser share its compositor), then encodes
+ * H.264 + AAC. Frame 0 is the poster frame, so every platform's thumbnail
+ * shows the best settled moment rather than a blank first frame.
  */
-export async function renderVideo(browser: Browser, options: VideoOptions): Promise<VideoResult> {
+export async function renderVideo(browserOrBrowsers: Browser | Browser[], options: VideoOptions): Promise<VideoResult> {
+  const browsers = Array.isArray(browserOrBrowsers) ? browserOrBrowsers : [browserOrBrowsers];
+  const browser = browsers[0];
   const { fps, format } = options;
   const frames = Math.max(2, Math.round(options.duration * fps));
   const zoom = options.draft ? 0.5 : 1;
@@ -96,14 +104,14 @@ export async function renderVideo(browser: Browser, options: VideoOptions): Prom
   const started = Date.now();
   let done = 0;
   try {
-    const workers = Math.max(1, Math.min(4, os.cpus().length, Math.ceil((frames - 1) / 24)));
+    const workers = browsers.length > 1 ? browsers.length : captureWorkers(frames - 1);
     const perWorker = Math.ceil((frames - 1) / workers);
     await Promise.all(
       Array.from({ length: workers }, async (_, worker) => {
         const first = 1 + worker * perWorker;
         const last = Math.min(frames - 1, first + perWorker - 1);
         if (first > last) return;
-        const stage = await Stage.open(browser, options.composition, format, 1);
+        const stage = await Stage.open(browsers[worker % browsers.length], options.composition, format, 1);
         try {
           if (worker === 0) samples.push({ t: 0, texts: await stage.sample() });
           for (let i = first; i <= last; i++) {

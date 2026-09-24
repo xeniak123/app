@@ -35,6 +35,8 @@ export interface TextInfo {
   inside: number;
   /** 'self' when the element's own overflow cuts its text, else the clipping ancestor. */
   clippedBy: string | null;
+  /** "Ź|0.90": a capital whose accent may hit the line above, and the line height in ems. */
+  accentClash: string | null;
   color: string;
   /** Every text color inside the block (highlighted words, links). */
   colors: string[];
@@ -492,6 +494,29 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
     });
   }
 
+  // Capitals with marks above them (Ż, Ź, Ś, Ć, Ń, Ó, É, Ü…): at tight leading the mark runs into the line above.
+  const MARKED_CAPITAL = /[ÀÁÂÃÄÅĆČĎÈÉÊËĚÌÍÎÏŃŇÒÓÔÕÖŘŚŠŤÙÚÛÜŮÝŹŻŽ]/;
+
+  /** A marked capital on a second or later line of text set tighter than its own size, if any. */
+  function accentClash(nodes: Text[], r: DOMRect): string | null {
+    const range = document.createRange();
+    for (const node of nodes) {
+      const cs = getComputedStyle(node.parentElement!);
+      const fontSize = parseFloat(cs.fontSize);
+      const lineHeight = cs.lineHeight === 'normal' ? fontSize * 1.2 : parseFloat(cs.lineHeight);
+      if (!(lineHeight < fontSize * 0.98)) continue;
+      const text = node.nodeValue ?? '';
+      for (let i = 0; i < text.length; i++) {
+        const ch = cs.textTransform === 'uppercase' ? text[i].toLocaleUpperCase() : text[i];
+        if (!MARKED_CAPITAL.test(ch)) continue;
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        if (range.getBoundingClientRect().top > r.top + lineHeight * 0.5) return `${ch}|${(lineHeight / fontSize).toFixed(2)}`;
+      }
+    }
+    return null;
+  }
+
   function insideShare(r: DOMRect): number {
     const x = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0));
     const y = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
@@ -563,6 +588,7 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
           opacity: opacityOf(el) * (1 - coveredShare(el, r)),
           inside: insideShare(r),
           clippedBy: clippedBy(el, r),
+          accentClash: accentClash(nodes, r),
           color: cs.color,
           colors,
           fontSize: parseFloat(cs.fontSize),

@@ -49,6 +49,8 @@ const flawed = `<!doctype html><html><head><meta charset="utf-8">
   <small>drobny druk</small>
   <div aria-hidden="true" style="position:absolute;left:900px;top:300px;font:300px 'Inter';color:#f4f4f4">DEKOR</div>
   <p class="odd">Nieznany font</p>
+  <div style="position:absolute;left:600px;top:80px;font:60px/.88 'Anton';text-transform:uppercase">17–19<br>paź</div>
+  <div style="position:absolute;left:800px;top:80px;font:60px/1.1 'Anton';text-transform:uppercase">17–19<br>lis</div>
   <img src="missing.png">
 </body></html>`;
 
@@ -151,6 +153,9 @@ describe.skipIf(!chrome)('tools', () => {
     expect(out).toMatch(/✗ .*Image failed to load: missing\.png/);
     expect(out).toMatch(/! .*too small to read at 9px/);
     expect(out).toMatch(/! .*Font "Comic Neue" is not available/);
+    // A Polish capital under tight leading: its mark can hide behind the line above.
+    expect(out).toMatch(/! .*The mark on "Ź" can run into the line above at line-height 0\.88/);
+    expect(out.match(/The mark on/g)).toHaveLength(1);
     // Text under an opaque card is not on screen, so it is not judged.
     expect(out).not.toContain('Schowany');
     // Decorative text bleeding off the edge is marked aria-hidden and not judged.

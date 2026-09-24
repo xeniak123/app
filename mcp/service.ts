@@ -14,7 +14,7 @@ import type { CompositionInfo, TextSample } from './runtime';
 import { makeMusic, makeSfx, SFX_KINDS, type MusicStyle, type SfxKind } from './music';
 import { soundEffectFile, SOUND_EFFECTS } from './sfx';
 import { contactSheet, SHEET_GAP, SHEET_PAD, type SheetItem } from './sheet';
-import { renderVideo } from './video';
+import { captureWorkers, renderVideo } from './video';
 
 export type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
 export interface ToolResult {
@@ -119,17 +119,17 @@ async function inspectFrame(stage: Stage, where: string, video: boolean): Promis
   return { issues: frameIssues(audit, pixels, where, video), png };
 }
 
-/** Samples the text on screen every `step` seconds, in parallel tabs that each only move forward in time. */
-async function sampleTimeline(browser: Browser, comp: Composition, format: Format, duration: number, step: number) {
+/** Samples the text on screen every `step` seconds, in parallel pages that each only move forward in time. */
+async function sampleTimeline(browsers: Browser[], comp: Composition, format: Format, duration: number, step: number) {
   const count = Math.floor(duration / step + 1e-9) + 1;
   const times = Array.from({ length: count }, (_, i) => Math.min(i * step, duration - 0.001));
-  const workers = Math.max(1, Math.min(4, os.cpus().length, Math.ceil(count / 40)));
+  const workers = browsers.length > 1 ? browsers.length : Math.max(1, Math.min(4, os.cpus().length, Math.ceil(count / 40)));
   const per = Math.ceil(count / workers);
   const chunks = await Promise.all(
     Array.from({ length: workers }, async (_, w) => {
       const slice = times.slice(w * per, (w + 1) * per);
       if (!slice.length) return [];
-      const stage = await Stage.open(browser, comp, format, 1);
+      const stage = await Stage.open(browsers[w % browsers.length], comp, format, 1);
       try {
         const out: { t: number; texts: TextSample[] }[] = [];
         for (const t of slice) {
@@ -262,7 +262,10 @@ export class TilecastService {
   async check(args: { file: string; formats?: string[]; time?: number }): Promise<ToolResult> {
     const comp = await loadComposition(this.root, args.file);
     const formats = resolveFormats(comp, args.formats);
-    return this.pool.use(async (browser) => {
+    // A video's timeline is sampled in several browser processes at once.
+    const processes = isVideo(comp) ? Math.max(1, Math.min(4, os.cpus().length)) : 1;
+    return this.pool.useMany(processes, async (browsers) => {
+      const browser = browsers[0];
       const reports: string[] = [];
       let failed = false;
       for (const format of formats) {
@@ -303,7 +306,7 @@ export class TilecastService {
               }
             }
             const step = 0.1;
-            const samples = await sampleTimeline(browser, comp, format, duration, step);
+            const samples = await sampleTimeline(browsers, comp, format, duration, step);
             const timeline = timelineIssues(samples, step, format, duration);
             issues.push(...timeline.issues);
             if (duration > 30) {
@@ -387,7 +390,10 @@ export class TilecastService {
       : path.join(this.outputDir(comp), `${comp.name}-${format.id}${draft ? '-draft' : ''}.mp4`);
     progress?.(0, 1, 'Preparing ffmpeg');
     const ffmpeg = await ensureFfmpeg();
-    return this.pool.use(async (browser) => {
+    const planned = (args.duration ?? Number(metaContent(comp.source, 'duration'))) * (args.fps ?? (Number(metaContent(comp.source, 'fps')) || 30));
+    const processes = captureWorkers(Number.isFinite(planned) ? planned : 0);
+    return this.pool.useMany(processes, async (browsers) => {
+      const browser = browsers[0];
       const probe = await Stage.open(browser, comp, format, 1);
       let info: CompositionInfo;
       try {
@@ -401,7 +407,7 @@ export class TilecastService {
       }
       if (duration > 600) throw new Error('Videos are limited to 10 minutes.');
       const fps = args.fps ?? info.fps ?? 30;
-      const result = await renderVideo(browser, {
+      const result = await renderVideo(browsers, {
         composition: comp,
         format,
         duration,

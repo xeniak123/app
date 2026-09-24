@@ -8050,6 +8050,14 @@ function frameIssues(audit, pixels, where, video) {
 			where,
 			message: `Text is cut off by ${text.clippedBy}: ${text.desc}`
 		});
+		if (text.accentClash) {
+			const [letter, leading] = text.accentClash.split("|");
+			issues.push({
+				level: "warning",
+				where,
+				message: `The mark on "${letter}" can run into the line above at line-height ${leading}; give lines with accented capitals at least 1.0: ${text.desc}`
+			});
+		}
 		if (text.fontSize < minFont) issues.push({
 			level: "warning",
 			where,
@@ -8471,7 +8479,7 @@ var Browser = class Browser {
 		});
 		this.exited.catch(() => void 0);
 	}
-	static async launch(executable) {
+	static async launch(executable, extraArgs = []) {
 		const profileDir = await mkdtemp(path.join(os.tmpdir(), "tilecast-chrome-"));
 		const args = [
 			"--headless",
@@ -8481,6 +8489,14 @@ var Browser = class Browser {
 			"--disable-extensions",
 			"--disable-dev-shm-usage",
 			"--disable-background-networking",
+			"--disable-component-update",
+			"--disable-client-side-phishing-detection",
+			"--disable-domain-reliability",
+			"--disable-sync",
+			"--disable-default-apps",
+			"--metrics-recording-only",
+			"--no-pings",
+			"--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,CertificateTransparencyComponentUpdater,AutofillServerCommunication,InterestFeedContentSuggestions",
 			"--disable-background-timer-throttling",
 			"--disable-renderer-backgrounding",
 			"--disable-backgrounding-occluded-windows",
@@ -8489,6 +8505,7 @@ var Browser = class Browser {
 			"--font-render-hinting=none",
 			"--allow-file-access-from-files",
 			`--user-data-dir=${profileDir}`,
+			...extraArgs,
 			"about:blank"
 		];
 		if (process.platform === "linux" && process.getuid?.() === 0) args.unshift("--no-sandbox");
@@ -8570,6 +8587,22 @@ var BrowserPool = class {
 				this.idleTimer.unref();
 			}
 		}
+	}
+	/**
+	* The warm browser plus `count - 1` extra browser processes for heavy parallel
+	* work. Tabs of one browser share its compositor, so capturing video frames
+	* scales with processes, not tabs. The extras close when the work is done.
+	*/
+	async useMany(count, work) {
+		return this.use(async (main) => {
+			const executable = this.executable();
+			const browsers = [main, ...(await Promise.all(Array.from({ length: Math.max(0, count - 1) }, () => Browser.launch(executable).catch(() => null)))).filter((b) => b !== null)];
+			try {
+				return await work(browsers);
+			} finally {
+				await Promise.all(browsers.slice(1).map((b) => b.close()));
+			}
+		});
 	}
 	async shutdown() {
 		clearTimeout(this.idleTimer);
@@ -9483,6 +9516,26 @@ function tilecastRuntime(config) {
 			return [p.x + origin.x, p.y + origin.y];
 		});
 	}
+	const MARKED_CAPITAL = /[ÀÁÂÃÄÅĆČĎÈÉÊËĚÌÍÎÏŃŇÒÓÔÕÖŘŚŠŤÙÚÛÜŮÝŹŻŽ]/;
+	/** A marked capital on a second or later line of text set tighter than its own size, if any. */
+	function accentClash(nodes, r) {
+		const range = document.createRange();
+		for (const node of nodes) {
+			const cs = getComputedStyle(node.parentElement);
+			const fontSize = parseFloat(cs.fontSize);
+			const lineHeight = cs.lineHeight === "normal" ? fontSize * 1.2 : parseFloat(cs.lineHeight);
+			if (!(lineHeight < fontSize * .98)) continue;
+			const text = node.nodeValue ?? "";
+			for (let i = 0; i < text.length; i++) {
+				const ch = cs.textTransform === "uppercase" ? text[i].toLocaleUpperCase() : text[i];
+				if (!MARKED_CAPITAL.test(ch)) continue;
+				range.setStart(node, i);
+				range.setEnd(node, i + 1);
+				if (range.getBoundingClientRect().top > r.top + lineHeight * .5) return `${ch}|${(lineHeight / fontSize).toFixed(2)}`;
+			}
+		}
+		return null;
+	}
 	function insideShare(r) {
 		const x = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0));
 		const y = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
@@ -9548,6 +9601,7 @@ function tilecastRuntime(config) {
 				opacity: opacityOf(el) * (1 - coveredShare(el, r)),
 				inside: insideShare(r),
 				clippedBy: clippedBy(el, r),
+				accentClash: accentClash(nodes, r),
 				color: cs.color,
 				colors,
 				fontSize: parseFloat(cs.fontSize),
@@ -45511,12 +45565,19 @@ function audioGraph(tracks, duration) {
 		skipped
 	};
 }
+/** How many parallel capture workers suit a clip of this many frames on this machine. */
+function captureWorkers(frames) {
+	return Math.max(1, Math.min(4, os.cpus().length, Math.ceil(frames / 24)));
+}
 /**
-* Captures every frame as a pure function of time in parallel tabs, then
-* encodes H.264 + AAC. Frame 0 is the poster frame, so every platform's
-* thumbnail shows the best settled moment rather than a blank first frame.
+* Captures every frame as a pure function of time in parallel, one worker per
+* browser process (tabs of one browser share its compositor), then encodes
+* H.264 + AAC. Frame 0 is the poster frame, so every platform's thumbnail
+* shows the best settled moment rather than a blank first frame.
 */
-async function renderVideo(browser, options) {
+async function renderVideo(browserOrBrowsers, options) {
+	const browsers = Array.isArray(browserOrBrowsers) ? browserOrBrowsers : [browserOrBrowsers];
+	const browser = browsers[0];
 	const { fps, format } = options;
 	const frames = Math.max(2, Math.round(options.duration * fps));
 	const zoom = options.draft ? .5 : 1;
@@ -45528,13 +45589,13 @@ async function renderVideo(browser, options) {
 	const started = Date.now();
 	let done = 0;
 	try {
-		const workers = Math.max(1, Math.min(4, os.cpus().length, Math.ceil((frames - 1) / 24)));
+		const workers = browsers.length > 1 ? browsers.length : captureWorkers(frames - 1);
 		const perWorker = Math.ceil((frames - 1) / workers);
 		await Promise.all(Array.from({ length: workers }, async (_, worker) => {
 			const first = 1 + worker * perWorker;
 			const last = Math.min(frames - 1, first + perWorker - 1);
 			if (first > last) return;
-			const stage = await Stage.open(browser, options.composition, format, 1);
+			const stage = await Stage.open(browsers[worker % browsers.length], options.composition, format, 1);
 			try {
 				if (worker === 0) samples.push({
 					t: 0,
@@ -45743,16 +45804,16 @@ async function inspectFrame(stage, where, video) {
 		png
 	};
 }
-/** Samples the text on screen every `step` seconds, in parallel tabs that each only move forward in time. */
-async function sampleTimeline(browser, comp, format, duration, step) {
+/** Samples the text on screen every `step` seconds, in parallel pages that each only move forward in time. */
+async function sampleTimeline(browsers, comp, format, duration, step) {
 	const count = Math.floor(duration / step + 1e-9) + 1;
 	const times = Array.from({ length: count }, (_, i) => Math.min(i * step, duration - .001));
-	const workers = Math.max(1, Math.min(4, os.cpus().length, Math.ceil(count / 40)));
+	const workers = browsers.length > 1 ? browsers.length : Math.max(1, Math.min(4, os.cpus().length, Math.ceil(count / 40)));
 	const per = Math.ceil(count / workers);
 	return (await Promise.all(Array.from({ length: workers }, async (_, w) => {
 		const slice = times.slice(w * per, (w + 1) * per);
 		if (!slice.length) return [];
-		const stage = await Stage.open(browser, comp, format, 1);
+		const stage = await Stage.open(browsers[w % browsers.length], comp, format, 1);
 		try {
 			const out = [];
 			for (const t of slice) {
@@ -45887,7 +45948,9 @@ var TilecastService = class {
 	async check(args) {
 		const comp = await loadComposition(this.root, args.file);
 		const formats = resolveFormats(comp, args.formats);
-		return this.pool.use(async (browser) => {
+		const processes = isVideo(comp) ? Math.max(1, Math.min(4, os.cpus().length)) : 1;
+		return this.pool.useMany(processes, async (browsers) => {
+			const browser = browsers[0];
 			const reports = [];
 			let failed = false;
 			for (const format of formats) {
@@ -45931,7 +45994,7 @@ var TilecastService = class {
 							});
 						}
 						const step = .1;
-						const timeline = timelineIssues(await sampleTimeline(browser, comp, format, duration, step), step, format, duration);
+						const timeline = timelineIssues(await sampleTimeline(browsers, comp, format, duration, step), step, format, duration);
 						issues.push(...timeline.issues);
 						if (duration > 30) issues.push({
 							level: "warning",
@@ -46008,7 +46071,10 @@ var TilecastService = class {
 		const out = args.out ? resolveInside(this.root, args.out.endsWith(".mp4") ? args.out : `${args.out}.mp4`) : path.join(this.outputDir(comp), `${comp.name}-${format.id}${draft ? "-draft" : ""}.mp4`);
 		progress?.(0, 1, "Preparing ffmpeg");
 		const ffmpeg = await ensureFfmpeg();
-		return this.pool.use(async (browser) => {
+		const planned = (args.duration ?? Number(metaContent(comp.source, "duration"))) * (args.fps ?? (Number(metaContent(comp.source, "fps")) || 30));
+		const processes = captureWorkers(Number.isFinite(planned) ? planned : 0);
+		return this.pool.useMany(processes, async (browsers) => {
+			const browser = browsers[0];
 			const probe = await Stage.open(browser, comp, format, 1);
 			let info;
 			try {
@@ -46020,7 +46086,7 @@ var TilecastService = class {
 			if (!duration || duration <= 0) throw new Error("The composition has no duration. Add <meta name=\"tilecast:duration\" content=\"18\"> (seconds) or pass duration.");
 			if (duration > 600) throw new Error("Videos are limited to 10 minutes.");
 			const fps = args.fps ?? info.fps ?? 30;
-			const result = await renderVideo(browser, {
+			const result = await renderVideo(browsers, {
 				composition: comp,
 				format,
 				duration,

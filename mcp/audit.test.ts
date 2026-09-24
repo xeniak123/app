@@ -13,6 +13,7 @@ const text = (over: Partial<TextInfo>): TextInfo => ({
   opacity: 1,
   inside: 1,
   clippedBy: null,
+  accentClash: null,
   color: 'rgb(0, 0, 0)',
   colors: ['rgb(0, 0, 0)'],
   fontSize: 40,

@@ -45,7 +45,9 @@ export function findIcons(query: string, limit = 40): string[] {
     for (const word of words) {
       if (name === word) score += 12;
       else if (parts.includes(word)) score += 8;
-      else if (name.includes(word)) score += 4;
+      else if (parts.some((part) => part.startsWith(word))) score += 8;
+      // A word hidden inside a longer name ("coin" in "bitcoin") is weak evidence.
+      else if (name.includes(word)) score += 2;
       if (tagList.some((tag) => tag === word)) score += 5;
       else if (tagList.some((tag) => tag.split(/\s+/).some((t) => t.startsWith(word)))) score += 2;
     }

@@ -361,6 +361,7 @@ export class Browser {
 /** Keeps one browser warm between tool calls and closes it after a quiet minute. */
 export class BrowserPool {
   private browser: Promise<Browser> | null = null;
+  private extras: Promise<Browser>[] = [];
   private idleTimer: NodeJS.Timeout | undefined;
   private active = 0;
 
@@ -401,28 +402,31 @@ export class BrowserPool {
   /**
    * The warm browser plus `count - 1` extra browser processes for heavy parallel
    * work. Tabs of one browser share its compositor, so capturing video frames
-   * scales with processes, not tabs. The extras close when the work is done.
+   * scales with processes, not tabs. The extras idle out with the main one.
    */
   async useMany<T>(count: number, work: (browsers: Browser[]) => Promise<T>): Promise<T> {
     return this.use(async (main) => {
       const executable = this.executable()!;
-      const extras = await Promise.all(
-        Array.from({ length: Math.max(0, count - 1) }, () => Browser.launch(executable).catch(() => null)),
-      );
-      const browsers = [main, ...extras.filter((b): b is Browser => b !== null)];
-      try {
-        return await work(browsers);
-      } finally {
-        await Promise.all(browsers.slice(1).map((b) => b.close()));
+      // Extras stay warm between calls like the main browser; dead ones are replaced.
+      for (let i = 0; i < count - 1; i++) {
+        const current = await this.extras[i]?.catch(() => null);
+        if (!current?.alive) this.extras[i] = Browser.launch(executable);
       }
+      const extras = await Promise.all(this.extras.slice(0, Math.max(0, count - 1)).map((b) => b.catch(() => null)));
+      return work([main, ...extras.filter((b): b is Browser => b !== null && b.alive)]);
     });
   }
 
   async shutdown() {
     clearTimeout(this.idleTimer);
-    const current = this.browser;
+    const all = [this.browser, ...this.extras];
     this.browser = null;
-    const browser = await current?.catch(() => null);
-    await browser?.close();
+    this.extras = [];
+    await Promise.all(
+      all.map(async (current) => {
+        const browser = await current?.catch(() => null);
+        await browser?.close();
+      }),
+    );
   }
 }

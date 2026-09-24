@@ -85,9 +85,11 @@ tilecast.onFrame((t) => {
 **Line mask reveal:** the line slides up from behind an invisible edge.
 
 ```css
-.line { display: block; overflow: hidden; }
+/* The padding gives descenders, accents (Ż, Ó) and italic overhangs room inside the mask;
+   the negative margin keeps the layout where it was. Without it the mask cuts them off. */
+.line { display: block; overflow: hidden; padding: .15em .12em .22em; margin: -.15em -.12em -.22em; }
 .line > span { display: block; animation: up .7s cubic-bezier(.16,1,.3,1) 2.1s both; }
-@keyframes up { from { transform: translateY(105%) } }
+@keyframes up { from { transform: translateY(125%) } }
 ```
 
 **Word stagger:** wrap words in spans with `style="--i: 0"`, `--i: 1` … and delay each with `calc(start + var(--i) * 60ms)`.

@@ -26,6 +26,10 @@ Tak wygląda podgląd filmu, który dostaje agent: każda scena po uspokojeniu s
 
 ![Plakat zrobiony przez świeżego agenta](docs/agent-test.jpg)
 
+Drugi test dotyczył wideo: „Zrób krótkie wideo na Instagram Stories (9:16) z muzyką, które ogłasza te warsztaty.” Agent przeczytał poradniki, rozpisał storyboard, wygenerował spokojny podkład i efekty, poprawił maskę tekstu, która według krytyka ucinała ogonki liter, i wyrenderował 19-sekundowe MP4 z ekranem zapisów jako okładką (-14,2 LUFS). Zajęło mu to 30 kroków i około 5 minut.
+
+![Klatki wideo zrobionego przez świeżego agenta](docs/agent-video.jpg)
+
 Wydarzenia, kawiarnia, pracownia i sklep w przykładach są fikcyjne.
 
 ## Jak to działa

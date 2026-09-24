@@ -178,7 +178,10 @@ export function createTilecastServer(service: TilecastService): McpServer {
         file: z.string().optional().describe('analyze_music: the audio file inside the project (mp3, wav, ogg, m4a…).'),
         query: z.string().optional().describe('find_icons: what the icon shows, in English, e.g. "coffee", "rocket launch".'),
         names: z.array(z.string()).optional().describe('get_icons: icon names. add_sfx: effect names.'),
-        dir: z.string().optional().describe('add_sfx: folder inside the project to copy into, usually next to the composition.'),
+        dir: z
+          .string()
+          .optional()
+          .describe('make_music, make_sfx, add_sfx: folder inside the project to write into, usually next to the composition; created if missing.'),
         size: z.number().int().min(8).max(2048).optional().describe('get_icons: width and height attributes (default 24).'),
         stroke_width: z.number().min(0.5).max(4).optional().describe('get_icons: line weight (default 2; 1.5 looks refined at large sizes).'),
         style: z

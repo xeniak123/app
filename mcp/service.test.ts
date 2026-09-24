@@ -251,6 +251,9 @@ describe.skipIf(!chrome)('tools', () => {
     expect(textOf(await service.assets({ action: 'list_fonts' }))).toContain('"Instrument Serif"');
     expect(textOf(await service.assets({ action: 'find_icons', query: 'coffee' }))).toMatch(/: coffee\b/);
     expect(textOf(await service.assets({ action: 'find_icons', query: 'music note' }))).toMatch(/: music\b/);
+    // A singular finds the plural icon before names that merely contain the word.
+    const coins = textOf(await service.assets({ action: 'find_icons', query: 'coin' }));
+    expect(coins.indexOf('coins')).toBeLessThan(coins.indexOf('bitcoin'));
     const icons = textOf(await service.assets({ action: 'get_icons', names: ['rocket', 'nope'], size: 48 }));
     expect(icons).toMatch(/<svg [^>]*width="48"[^>]*stroke="currentColor"/);
     expect(icons).toContain('Unknown: nope');

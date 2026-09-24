@@ -57,7 +57,7 @@ Recorded (Kenney, CC0; `assets` `list_sfx` and `add_sfx`): `soft-hit`, `soft-hit
 
 ## Mixing
 
-- Music at `data-volume` 0.7–0.85, effects at 0.3–0.6 under it. The tool mixes everything and keeps the peak under 0 dB.
+- Music at `data-volume` 0.7–0.85, effects at 0.3–0.6 under it: these set the balance. `render_video` then measures the whole mix and brings it to -14 LUFS (the level YouTube, Instagram and TikTok play at) with true peaks under -1 dBTP, so the overall level takes care of itself; `loudness` sets another target or `"off"`.
 - One hero sound per scene; repeated small sounds (ticks, clicks) quieter and not on every single item.
 - Clicks on the press, hits on the landing, whooshes ahead of the move.
 - Let the final hit and the music ring over the last frame; don't cut sound off with a hard stop.

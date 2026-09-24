@@ -21,6 +21,8 @@ export interface VideoOptions {
   draft: boolean;
   audio: AudioTrack[];
   ffmpeg: string;
+  /** Target loudness in LUFS (default -14); null keeps the mix as it is. */
+  loudness?: number | null;
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -33,13 +35,19 @@ export interface VideoResult {
   frames: number;
   audio: string[];
   skippedAudio: string[];
+  /** Integrated loudness of the mix before and of the MP4 after normalization (LUFS), and its true peak (dBTP). */
+  loudness: { before: number; after: number; peak: number } | null;
   timeline: TimelineReport;
   captureSeconds: number;
   encodeSeconds: number;
 }
 
 /** ffmpeg filter graph that places, trims, fades and mixes the composition's <audio data-tilecast> tracks. */
-export function audioGraph(tracks: AudioTrack[], duration: number): { inputs: string[]; filter: string | null; used: string[]; skipped: string[] } {
+export function audioGraph(
+  tracks: AudioTrack[],
+  duration: number,
+  firstInput = 1,
+): { inputs: string[]; filter: string | null; used: string[]; skipped: string[] } {
   const inputs: string[] = [];
   const chains: string[] = [];
   const used: string[] = [];
@@ -52,7 +60,7 @@ export function audioGraph(tracks: AudioTrack[], duration: number): { inputs: st
     }
     const playFor = Math.min(track.duration ?? Infinity, duration - track.start);
     if (playFor <= 0.01) continue;
-    const index = used.length + 1;
+    const index = used.length + firstInput;
     if (track.loop) inputs.push('-stream_loop', '-1');
     inputs.push('-i', file);
     const chain = [
@@ -73,9 +81,39 @@ export function audioGraph(tracks: AudioTrack[], duration: number): { inputs: st
     used.push(file);
   }
   if (!used.length) return { inputs, filter: null, used, skipped };
-  const labels = used.map((_, i) => `[a${i + 1}]`).join('');
+  const labels = used.map((_, i) => `[a${i + firstInput}]`).join('');
   const mix = used.length > 1 ? `${labels}amix=inputs=${used.length}:duration=longest:dropout_transition=0,volume=${used.length}` : `${labels}anull`;
-  return { inputs, filter: `${chains.join(';')};${mix},alimiter=limit=0.95[aout]`, used, skipped };
+  return { inputs, filter: `${chains.join(';')};${mix}[aout]`, used, skipped };
+}
+
+/** Integrated loudness (LUFS) and true peak (dBTP) of an audio file, by EBU R128. */
+export async function measureLoudness(ffmpeg: string, file: string): Promise<{ lufs: number; peak: number }> {
+  const log = await run(ffmpeg, ['-hide_banner', '-nostats', '-i', file, '-vn', '-af', 'ebur128=peak=true', '-f', 'null', '-']);
+  const last = (pattern: RegExp) => {
+    const values = [...log.matchAll(pattern)].map((m) => (m[1] === '-inf' ? -Infinity : Number(m[1])));
+    return values.length ? values[values.length - 1] : -Infinity;
+  };
+  return { lufs: last(/I:\s+(-?[\d.]+|-inf) LUFS/g), peak: last(/Peak:\s+(-?[\d.]+|-inf) dBFS/g) };
+}
+
+/** Peak ceiling after the gain: -1.4 dBFS on samples keeps true peaks under -1 dBTP after AAC. */
+const CEILING = 0.85;
+
+/**
+ * Mixes the tracks to one file, measures it and returns the gain that brings it
+ * to `target` LUFS (the level social platforms play at), with a limiter guarding
+ * the peaks. Silence and near-silence are left alone.
+ */
+async function mixAndMeasure(ffmpeg: string, tracks: AudioTrack[], duration: number, dir: string, target: number | null) {
+  const graph = audioGraph(tracks, duration, 0);
+  if (!graph.filter) return { ...graph, file: null, before: null, gain: 0 };
+  const file = path.join(dir, 'mix.wav');
+  await run(ffmpeg, ['-y', '-hide_banner', '-loglevel', 'error', ...graph.inputs, '-filter_complex', graph.filter, '-map', '[aout]', '-c:a', 'pcm_f32le', '-ar', '48000', file], {
+    timeoutMs: 600_000,
+  });
+  const before = await measureLoudness(ffmpeg, file);
+  const gain = target === null || !Number.isFinite(before.lufs) || before.lufs < -60 ? 0 : Math.max(-20, Math.min(12, target - before.lufs));
+  return { ...graph, file, before, gain };
 }
 
 /** How many parallel capture workers suit a clip of this many frames on this machine. */
@@ -139,7 +177,7 @@ export async function renderVideo(browserOrBrowsers: Browser | Browser[], option
     options.onProgress?.(frames, frames);
     const captureSeconds = (Date.now() - started) / 1000;
 
-    const audio = audioGraph(options.audio, frames / fps);
+    const audio = await mixAndMeasure(options.ffmpeg, options.audio, frames / fps, dir, options.loudness === undefined ? -14 : options.loudness);
     await mkdir(path.dirname(options.out), { recursive: true });
     const width = Math.floor((format.width * zoom) / 2) * 2;
     const height = Math.floor((format.height * zoom) / 2) * 2;
@@ -152,8 +190,9 @@ export async function renderVideo(browserOrBrowsers: Browser | Browser[], option
       String(fps),
       '-i',
       path.join(dir, 'f%06d.jpg'),
-      ...audio.inputs,
-      ...(audio.filter ? ['-filter_complex', audio.filter, '-map', '0:v', '-map', '[aout]', '-c:a', 'aac', '-b:a', '192k'] : ['-an']),
+      ...(audio.file
+        ? ['-i', audio.file, '-map', '0:v', '-map', '1:a', '-af', `volume=${audio.gain.toFixed(2)}dB,alimiter=limit=${CEILING}:level=false`, '-c:a', 'aac', '-b:a', '192k']
+        : ['-an']),
       // Screenshots are sRGB; convert with the BT.709 matrix and tag it, so players show the same colors.
       '-vf',
       `scale=${width}:${height}:in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p`,
@@ -183,6 +222,7 @@ export async function renderVideo(browserOrBrowsers: Browser | Browser[], option
     ];
     const encodeStart = Date.now();
     await run(options.ffmpeg, args, { timeoutMs: 1_800_000 });
+    const after = audio.file ? await measureLoudness(options.ffmpeg, options.out) : null;
     const posterFile = options.out.replace(/\.mp4$/i, '') + '.jpg';
     await copyFile(frameFile(0), posterFile);
     return {
@@ -194,6 +234,7 @@ export async function renderVideo(browserOrBrowsers: Browser | Browser[], option
       frames,
       audio: audio.used,
       skippedAudio: audio.skipped,
+      loudness: audio.before && after ? { before: audio.before.lufs, after: after.lufs, peak: after.peak } : null,
       timeline,
       captureSeconds,
       encodeSeconds: (Date.now() - encodeStart) / 1000,

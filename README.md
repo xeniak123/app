@@ -100,7 +100,7 @@ Agenci bez obsługi skilli dostają cały poradnik przez narzędzie `guide`, a s
 | `preview` | obraz kompozycji: formaty obok siebie albo taśma klatek filmu (sceny i cięcia) + szybka ocena krytyka |
 | `check` | krytyk: tekst poza kadrem, ucięty albo zasłonięty, kolizje, za mały tekst, kontrast mierzony na pikselach (także na zdjęciach i gradientach), brakujące fonty i obrazki, zasoby z sieci, błędy skryptów; w wideo czas czytania każdej linijki, błyski, pusty początek lub koniec, brak dźwięku i propozycja klatki-okładki |
 | `render_image` | PNG każdego formatu (A4/A3/A5 w 300 dpi + PDF w wymiarze papieru, social w natywnym rozmiarze) |
-| `render_video` | MP4 30 fps z miksem ścieżek `<audio data-tilecast>`, kolory BT.709, okładka jako klatka 0 i osobny `.jpg`; `quality: "draft"` renderuje szybką wersję w połowie rozmiaru |
+| `render_video` | MP4 30 fps z miksem ścieżek `<audio data-tilecast>` wyrównanym do -14 LUFS, kolory BT.709, okładka jako klatka 0 i osobny `.jpg`; `quality: "draft"` renderuje szybką wersję w połowie rozmiaru |
 | `assets` | `list_fonts`, `find_icons` / `get_icons` (1854 ikony Lucide jako SVG), `make_music` (podkład z siatką beatów), `analyze_music` (beaty i mocne momenty Twojego utworu), `make_sfx` (whoosh, riser, impact…), `list_sfx` / `add_sfx` (efekty CC0), `list_formats` |
 | `guide` | poradnik: workflow, design, ruch, tony, audio, runtime |
 
@@ -131,7 +131,7 @@ Formaty: `poster-a4` (1240×1754 → 2480×3508), `poster-a3`, `flyer-a5`, `squa
 
 Masz własny utwór? `analyze_music` znajduje jego tempo, beaty, początki taktów, krzywą energii i mocne momenty (drop, powrót bitu, najmocniejsze uderzenia) i zapisuje je obok pliku, więc film montuje się pod prawdziwą piosenkę tak samo jak pod wygenerowaną.
 
-`make_sfx` generuje efekty (whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer), a `add_sfx` kopiuje nagrane efekty Kenney (CC0). Render miksuje wszystkie ścieżki, a limiter pilnuje, żeby miks się nie przesterował. Przykładowy film ma -16 LUFS i szczyt -0,7 dBFS.
+`make_sfx` generuje efekty (whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer), a `add_sfx` kopiuje nagrane efekty Kenney (CC0). Render miksuje wszystkie ścieżki, mierzy głośność całości i wyrównuje ją do -14 LUFS, na tym poziomie grają YouTube, Instagram i TikTok. Szczyty trzyma poniżej -1 dBTP, żeby nic się nie przesterowało. Przykładowy film: miks -16,4 LUFS, gotowe MP4 -14,3 LUFS, szczyt -1,1 dBTP.
 
 ## Przykłady
 

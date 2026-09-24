@@ -143,6 +143,10 @@ export function createTilecastServer(service: TilecastService): McpServer {
         poster_time: z.number().min(0).optional().describe('Moment used as frame 0 and the .jpg thumbnail. Default: tilecast:poster, else the most settled moment.'),
         quality: z.enum(['final', 'draft']).optional().describe('draft: half size and fast encoding, for checking motion and sound.'),
         out: z.string().optional().describe('Output .mp4 path inside the project.'),
+        loudness: z
+          .union([z.number().min(-30).max(-8), z.literal('off')])
+          .optional()
+          .describe('Target loudness in LUFS: the mix is measured and brought to it with peaks kept under -1 dBTP. Default -14, the level YouTube, Instagram and TikTok play at; "off" keeps the mix as it is.'),
       },
     },
     async (args, extra) => {

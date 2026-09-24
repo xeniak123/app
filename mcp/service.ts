@@ -380,7 +380,16 @@ export class TilecastService {
 
   /** An MP4 (H.264 + AAC) with the best settled frame baked in as frame 0, plus that poster as .jpg. */
   async renderVideo(
-    args: { file: string; format?: string; duration?: number; fps?: number; poster_time?: number; quality?: 'final' | 'draft'; out?: string },
+    args: {
+      file: string;
+      format?: string;
+      duration?: number;
+      fps?: number;
+      poster_time?: number;
+      quality?: 'final' | 'draft';
+      out?: string;
+      loudness?: number | 'off';
+    },
     progress?: Progress,
   ): Promise<ToolResult> {
     const comp = await loadComposition(this.root, args.file);
@@ -418,6 +427,7 @@ export class TilecastService {
         draft,
         audio: info.audio,
         ffmpeg: ffmpeg.path,
+        loudness: args.loudness === 'off' ? null : (args.loudness ?? -14),
         onProgress: (done, total) => progress?.(done, total, 'Capturing frames'),
       });
       const readable = result.timeline.issues.filter((i) => i.message.includes('readable for') || i.message.includes('flashes'));
@@ -425,7 +435,12 @@ export class TilecastService {
         `Rendered ${this.relative(result.out)}  ${result.width}×${result.height} · ${seconds(duration)} · ${fps} fps · ${await fileSize(result.out)}${draft ? ' · DRAFT (half size)' : ''}`,
         `Poster: ${this.relative(result.poster)} (frame 0 = ${seconds(result.posterTime)}${args.poster_time === undefined && info.poster === null ? ', picked as the most settled moment' : ''})`,
         result.audio.length
-          ? `Audio: ${result.audio.map((a) => path.basename(a)).join(', ')}`
+          ? `Audio: ${[...result.audio.reduce((counts, a) => counts.set(path.basename(a), (counts.get(path.basename(a)) ?? 0) + 1), new Map<string, number>())]
+              .map(([name, count]) => (count > 1 ? `${name} ×${count}` : name))
+              .join(', ')}` +
+            (result.loudness
+              ? ` · loudness ${result.loudness.before.toFixed(1)} → ${result.loudness.after.toFixed(1)} LUFS, peak ${result.loudness.peak.toFixed(1)} dBTP`
+              : '')
           : 'Audio: none (silent video).',
         ...(result.skippedAudio.length ? [`Skipped audio (missing or remote): ${result.skippedAudio.join(', ')}`] : []),
         `Time: ${result.captureSeconds.toFixed(1)}s capturing ${result.frames} frames, ${result.encodeSeconds.toFixed(1)}s encoding${ffmpeg.installed ? ' (ffmpeg was downloaded once into the cache)' : ''}.`,

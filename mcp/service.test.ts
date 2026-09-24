@@ -235,6 +235,10 @@ describe.skipIf(!chrome)('tools', () => {
       expect(out).toContain('Rendered promo/export/clip-640x360.mp4  640×360 · 4s · 30 fps');
       expect(out).toContain('frame 0 = 3s');
       expect(out).toContain('Audio: soft-hit.ogg, bell-short.ogg');
+      // The mix is measured and brought towards -14 LUFS with the peaks kept down.
+      const loud = out.match(/loudness (-?[\d.]+) → (-?[\d.]+) LUFS, peak (-?[\d.]+) dBTP/);
+      expect(loud).not.toBeNull();
+      expect(Number(loud![3])).toBeLessThanOrEqual(-0.8);
       expect(out).toContain('"Szybki błysk" flashes by');
       expect(imageOf(result)?.mimeType).toBe('image/jpeg');
       const probe = spawnSync(ffmpeg!, ['-hide_banner', '-i', path.join(root, 'promo/export/clip-640x360.mp4')], { encoding: 'utf8' }).stderr;

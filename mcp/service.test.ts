@@ -47,6 +47,7 @@ const flawed = `<!doctype html><html><head><meta charset="utf-8">
   <div class="box">Ten tekst jest za długi na to pudełko</div>
   <p class="under">Schowany pod kartą</p><div class="cover"></div>
   <small>drobny druk</small>
+  <div aria-hidden="true" style="position:absolute;left:900px;top:300px;font:300px 'Inter';color:#f4f4f4">DEKOR</div>
   <p class="odd">Nieznany font</p>
   <img src="missing.png">
 </body></html>`;
@@ -152,6 +153,8 @@ describe.skipIf(!chrome)('tools', () => {
     expect(out).toMatch(/! .*Font "Comic Neue" is not available/);
     // Text under an opaque card is not on screen, so it is not judged.
     expect(out).not.toContain('Schowany');
+    // Decorative text bleeding off the edge is marked aria-hidden and not judged.
+    expect(out).not.toContain('DEKOR');
   }, 60_000);
 
   it('follows text through a video for reading time', async () => {

@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="tilecast:formats" content="landscape">
+<meta name="tilecast:duration" content="20.5">
+<meta name="tilecast:scenes" content="0 2.034 6.102 13.5 18.305">
+<meta name="tilecast:poster" content="5.4">
+<title>Tilecast launch</title>
+<style>
+  /*
+    0      hook: a prompt types itself
+    2.034  reveal, beat-locked to the drop: the poster builds while its code appears
+    6.102  the critic: three findings every other beat, fixes in the breakdown
+    12.203 PASS, beat-locked to the return
+    13.5   results: three cards on consecutive beats
+    18.305 payoff, beat-locked to the final hit
+  */
+  :root {
+    --ink: #0d0d10;
+    --panel: #16161b;
+    --cream: #f4f1ea;
+    --dim: rgba(244, 241, 234, .72);
+    --accent: #ff5a1f;
+    --pass: #3ddc97;
+    --fail: #ff5d5d;
+    --land: cubic-bezier(.16, 1, .3, 1);
+    --exit: cubic-bezier(.7, 0, .84, 0);
+  }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+  body { position: relative; background: var(--ink); color: var(--cream); font-family: 'Inter', sans-serif; }
+
+  .glow { position: absolute; inset: -20%;
+    background:
+      radial-gradient(38% 42% at 72% 42%, rgba(255, 90, 31, .17), transparent 70%),
+      radial-gradient(30% 34% at 18% 82%, rgba(61, 220, 151, .07), transparent 70%);
+    animation: drift 20.5s linear both; }
+  @keyframes drift { to { transform: translate(-5%, 4%) rotate(4deg); } }
+  .grain { position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  @keyframes in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(46px); } }
+  @keyframes slam { from { opacity: 0; transform: scale(1.35); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.4); } }
+  @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes push { from { transform: scale(1); } to { transform: scale(1.045); } }
+
+  .display { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; letter-spacing: -0.035em; line-height: .95; margin: 0; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ---- 1 · hook, and the prompt that stays through the reveal ---- */
+  .prompt-block { position: absolute; left: 160px; top: 380px; transform-origin: 0 0;
+    animation: to-corner .55s var(--land) 1.95s forwards, out .3s 5.8s forwards; }
+  @keyframes to-corner { to { transform: translate(-40px, -310px) scale(.45); } }
+  .who { font: 600 32px/1 'Inter', sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 30px;
+    animation: rise .5s var(--land) 0s both, out .2s 1.85s forwards; }
+  .prompt { font: 500 78px/1.1 'JetBrains Mono', monospace; letter-spacing: -0.02em; white-space: nowrap; }
+  .prompt .chevron { color: var(--accent); margin-right: .45em; }
+  .caret { display: inline-block; width: .55em; height: 1em; margin-left: .08em; vertical-align: -.12em; background: var(--accent);
+    animation: blink 1s steps(1) infinite, out .01s 1.3s forwards; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .status { margin-top: 34px; font: 500 54px/1 'JetBrains Mono', monospace; color: var(--dim);
+    animation: rise .4s var(--land) 1.3s both; }
+  .status b { color: var(--pass); font-weight: 600; }
+
+  /* ---- 2 · reveal: code on the left, the poster builds on the right ---- */
+  #s2 { animation: in .01s 2.034s both, out .25s 5.85s forwards; }
+  #s2 .stage { position: absolute; inset: 0; animation: push 4.1s linear 2.034s both; transform-origin: 70% 50%; }
+  .caption { position: absolute; left: 120px; top: 250px; font-size: 76px; max-width: 900px; }
+  .caption span { display: block; animation: rise .6s var(--land) 2.7s both; }
+  .caption span + span { color: var(--accent); animation-delay: 3.05s; }
+  .code { position: absolute; left: 120px; top: 460px; width: 900px; height: 500px; border-radius: 18px; background: var(--panel);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 30px 60px rgba(0,0,0,.35); overflow: hidden;
+    animation: rise .6s var(--land) 2.1s both; }
+  .code .bar { height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 22px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .code .bar i { width: 13px; height: 13px; border-radius: 50%; background: #3a3a44; }
+  .code .bar span { margin-left: 16px; font: 500 22px 'JetBrains Mono', monospace; color: var(--dim); }
+  .code pre { margin: 0; padding: 22px 30px; font: 400 23px/1.72 'JetBrains Mono', monospace; color: #d9d6cf; }
+  .code pre > span { display: block; white-space: pre; animation: wipe .3s steps(18) both; }
+  .t { color: #ff8a5c; } .a { color: #9ecbff; } .s { color: #b5e48c; } .p { color: #7ee0c3; } .c { color: #6b6a72; }
+
+  .card { position: absolute; left: 1180px; top: 158px; width: 540px; height: 764px; overflow: hidden; border-radius: 6px; --u: 5.4px;
+    background: radial-gradient(120% 70% at 50% 18%, #1a2c4a 0%, #0c1424 62%);
+    box-shadow: 0 40px 90px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.07);
+    transform: perspective(1800px) rotateY(-9deg) rotateX(2deg);
+    animation: card-in .7s var(--land) 2.034s both; font-family: 'Inter', sans-serif; color: #f6efe3; }
+  @keyframes card-in { from { opacity: 0; transform: perspective(1800px) rotateY(-24deg) rotateX(6deg) translateY(60px) scale(.94); } }
+  .card .record { position: absolute; left: 50%; top: 9%; width: calc(76 * var(--u)); aspect-ratio: 1; border-radius: 50%; margin-left: calc(-38 * var(--u));
+    background:
+      conic-gradient(from 20deg, transparent 0 8%, rgba(255,255,255,.16) 12%, transparent 18% 55%, rgba(255,255,255,.10) 60%, transparent 66%),
+      repeating-radial-gradient(circle, #1c2638 0 1px, #121a29 1px 3px);
+    box-shadow: 0 0 calc(18 * var(--u)) rgba(242,181,68,.28), 0 0 0 calc(.6 * var(--u)) rgba(242,181,68,.35);
+    animation: pop .6s var(--land) 2.542s both; }
+  .card .record::before { content: ''; position: absolute; inset: 34%; border-radius: 50%; background: radial-gradient(circle, #0c1424 0 7%, #f2b544 7.5% 100%); }
+  .card .water { position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0 2px, transparent 2px 9px), linear-gradient(180deg, #16314f, #0a1220 80%);
+    animation: in .5s ease-out 2.3s both; }
+  .card .label { position: absolute; top: 4.2%; left: 7%; right: 7%; display: flex; justify-content: space-between;
+    font: 700 calc(2.1 * var(--u)) 'Space Mono', monospace; letter-spacing: .16em; text-transform: uppercase; color: #f2b544;
+    animation: in .4s 4.07s both; }
+  .card h1 { position: absolute; left: 6.5%; top: 47%; margin: 0; font: 800 calc(31 * var(--u)) / .8 'Fraunces', serif; letter-spacing: -0.045em;
+    animation: slam .45s var(--land) 3.051s both; transform-origin: 20% 60%; }
+  .card h1 em { display: block; font-style: italic; font-weight: 300; font-size: .52em; letter-spacing: -0.02em; color: #f2b544; margin: .12em 0 0 .06em;
+    animation: rise .5s var(--land) 3.559s both; }
+  .card .facts { position: absolute; left: 7%; right: 7%; bottom: 6%; display: grid; grid-template-columns: auto 1fr; column-gap: calc(5 * var(--u)); align-items: end;
+    animation: rise .5s var(--land) 4.068s both; }
+  .card .when { font: 800 calc(8.4 * var(--u)) / .95 'Bricolage Grotesque', sans-serif; letter-spacing: -0.02em; }
+  .card .when b { color: #ff6a3d; }
+  .card .where { font-size: calc(3 * var(--u)); line-height: 1.35; border-left: 2px solid rgba(246,239,227,.3); padding-left: calc(3 * var(--u)); color: rgba(246,239,227,.8); }
+  .card .where strong { display: block; color: #f6efe3; }
+
+  /* ---- 3 · the critic ---- */
+  #s3 { animation: in .3s 6.102s both, out .2s 13.3s forwards; }
+  #s3 .stage { position: absolute; inset: 0; animation: push 7s linear 6.102s both; transform-origin: 30% 50%; }
+  .critic { position: absolute; left: 120px; top: 270px; font-size: 108px; max-width: 800px; animation: rise .6s var(--land) 6.2s both; }
+  .sub { position: absolute; left: 124px; top: 640px; font: 500 38px/1.3 'Inter', sans-serif; color: var(--dim); animation: rise .5s var(--land) 7.12s both; }
+  .report { position: absolute; left: 1000px; top: 230px; width: 800px; height: 620px; border-radius: 22px; background: var(--panel);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 40px 80px rgba(0,0,0,.4); animation: rise .6s var(--land) 6.35s both; }
+  .report header { padding: 30px 40px; border-bottom: 1px solid rgba(255,255,255,.07); font: 500 26px 'JetBrains Mono', monospace; color: var(--dim); }
+  .report header b { color: var(--cream); font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 28px; padding: 26px 40px; font: 600 38px/1.2 'Inter', sans-serif; }
+  .row .mark { position: relative; flex: none; width: 58px; height: 58px; border-radius: 50%; }
+  .row .mark::before, .row .mark::after { content: ''; position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center;
+    font: 800 32px/58px 'Inter', sans-serif; text-align: center; color: var(--ink); }
+  .row .mark::before { content: '✕'; background: var(--fail); }
+  .row .mark::after { content: '✓'; background: var(--pass); animation: pop .35s cubic-bezier(.34,1.56,.64,1) var(--fix) both; }
+  .row:nth-child(2) { animation: rise .5s var(--land) 6.61s both; --fix: 10.17s; }
+  .row:nth-child(3) { animation: rise .5s var(--land) 7.627s both; --fix: 10.678s; }
+  .row:nth-child(4) { animation: rise .5s var(--land) 8.644s both; --fix: 11.186s; }
+  .stamp { position: absolute; right: 56px; bottom: 44px; padding: 8px 34px 4px; border: 9px solid var(--pass); border-radius: 18px; color: var(--pass);
+    font-size: 118px; transform: rotate(-7deg); animation: stamp .3s var(--land) 12.203s both; }
+  @keyframes stamp { from { opacity: 0; transform: rotate(-7deg) scale(2.2); } }
+
+  /* ---- 4 · results ---- */
+  #s4 { animation: in .25s 13.5s both, out .2s 18.1s forwards; }
+  #s4 .stage { position: absolute; inset: 0; animation: push 4.8s linear 13.5s both; transform-origin: 50% 70%; }
+  .results { position: absolute; left: 120px; top: 150px; font-size: 86px; animation: rise .6s var(--land) 13.55s both; }
+  .results b { color: var(--accent); font-weight: 800; }
+  .cards { position: absolute; left: 120px; right: 120px; bottom: 140px; display: flex; gap: 40px; align-items: flex-end; }
+  .cards figure { margin: 0; display: flex; flex-direction: column; gap: 22px; animation: rise .6s var(--land) var(--at) both; }
+  .cards img { display: block; height: 560px; border-radius: 10px; box-shadow: 0 30px 70px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.07); }
+  .cards figcaption { font: 600 28px 'Inter', sans-serif; color: var(--dim); white-space: nowrap; }
+  .video { position: relative; width: 886px; height: 498px; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); }
+  .video img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; box-shadow: none; }
+  .video .shade { position: absolute; inset: 55% 0 0 0; background: linear-gradient(transparent, rgba(8,8,10,.85)); }
+  .video .play { position: absolute; left: 50%; top: 46%; width: 104px; height: 104px; margin: -52px 0 0 -52px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 10px 40px rgba(255,90,31,.45); animation: pop .5s cubic-bezier(.34,1.56,.64,1) 15.0s both; }
+  .video .play::after { content: ''; position: absolute; left: 42px; top: 31px; border-left: 32px solid var(--ink); border-top: 21px solid transparent; border-bottom: 21px solid transparent; }
+  .video .bar { position: absolute; left: 34px; right: 34px; bottom: 30px; height: 7px; border-radius: 4px; background: rgba(255,255,255,.2); }
+  .video .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 4px; background: var(--accent); }
+  .video .wave { position: absolute; left: 34px; right: 34px; bottom: 56px; height: 56px; display: flex; align-items: flex-end; gap: 5px; }
+  .video .wave i { flex: 1; background: rgba(244,241,234,.35); border-radius: 2px; }
+
+  /* ---- 5 · payoff ---- */
+  #s5 { animation: in .01s 18.305s both; }
+  .payoff { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .mark4 { display: grid; grid-template-columns: repeat(2, 64px); gap: 12px; margin-bottom: 46px; animation: pop .5s cubic-bezier(.34,1.56,.64,1) 18.305s both; }
+  .mark4 i { height: 64px; border-radius: 16px; background: var(--cream); }
+  .mark4 i:nth-child(2) { background: var(--accent); }
+  .word { font-size: 236px; animation: slam .5s var(--land) 18.305s both; }
+  .tag { margin-top: 34px; font: 500 60px/1.1 'Bricolage Grotesque', sans-serif; letter-spacing: -0.02em; color: var(--cream); animation: rise .5s var(--land) 18.36s both; }
+  .meta { margin-top: 40px; display: flex; gap: 34px; font: 500 30px 'JetBrains Mono', monospace; color: var(--dim); animation: rise .5s var(--land) 18.42s both; }
+  .meta b { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <!-- 1 · hook -->
+  <div class="prompt-block">
+    <div class="who">your coding agent</div>
+    <div class="prompt"><span class="chevron">›</span><span class="typed" data-text="make a poster for our jazz night"></span><span class="caret"></span></div>
+    <div class="status">tilecast · <b>composing</b></div>
+  </div>
+
+  <!-- 2 · reveal -->
+  <section class="scene" id="s2"><div class="stage">
+    <h2 class="display caption"><span>It writes HTML and CSS.</span><span>From scratch.</span></h2>
+    <div class="code" aria-hidden="true">
+      <div class="bar"><i></i><i></i><i></i><span>tilecast/jazz/jazz.html</span></div>
+      <pre><span style="animation-delay: 2.2s"><span class="t">&lt;meta</span> <span class="a">name</span>=<span class="s">"tilecast:formats"</span> <span class="a">content</span>=<span class="s">"poster-a4 story"</span><span class="t">&gt;</span></span><span style="animation-delay: 2.35s"><span class="t">&lt;style&gt;</span></span><span style="animation-delay: 2.45s">  <span class="p">body</span> { <span class="a">background</span>: radial-gradient(<span class="s">#1a2c4a</span>, <span class="s">#0c1424</span>); }</span><span style="animation-delay: 2.62s">  <span class="p">.record</span> { <span class="a">border-radius</span>: 50%; <span class="c">/* the moon is a record */</span> }</span><span style="animation-delay: 3.1s">  <span class="p">h1</span> { <span class="a">font</span>: 800 31vmin/.8 <span class="s">'Fraunces'</span>; }</span><span style="animation-delay: 3.6s">  <span class="p">h1 em</span> { <span class="a">font-style</span>: italic; <span class="a">color</span>: <span class="s">#f2b544</span>; }</span><span style="animation-delay: 3.75s"><span class="t">&lt;/style&gt;</span></span><span style="animation-delay: 3.85s"><span class="t">&lt;div</span> <span class="a">class</span>=<span class="s">"record"</span><span class="t">&gt;&lt;/div&gt;</span></span><span style="animation-delay: 3.95s"><span class="t">&lt;h1&gt;</span>Jazz<span class="t">&lt;em&gt;</span>w parku<span class="t">&lt;/em&gt;&lt;/h1&gt;</span></span><span style="animation-delay: 4.1s"><span class="t">&lt;p</span> <span class="a">class</span>=<span class="s">"when"</span><span class="t">&gt;</span>Sob 14.06 <span class="t">&lt;b&gt;</span>19:00<span class="t">&lt;/b&gt;&lt;/p&gt;</span></span></pre>
+    </div>
+    <div class="card">
+      <div class="record"></div>
+      <div class="water"></div>
+      <div class="label" aria-hidden="true"><span>Koncert plenerowy</span><span>Wstęp wolny</span></div>
+      <h1>Jazz<em>w parku</em></h1>
+      <div class="facts">
+        <div class="when">Sob 14.06<br><b>19:00</b></div>
+        <div class="where" aria-hidden="true"><strong>Kwartet Nocny</strong>Park Miejski, scena nad stawem</div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- 3 · the critic -->
+  <section class="scene" id="s3"><div class="stage">
+    <h2 class="display critic">A critic that checks every pixel.</h2>
+    <p class="sub">Contrast, overflow, reading time.</p>
+    <div class="report">
+      <header>check · <b>jazz.html</b> · story</header>
+      <div class="row"><span class="mark"></span>Text runs off the canvas</div>
+      <div class="row"><span class="mark"></span>Low contrast 2.4 : 1</div>
+      <div class="row"><span class="mark"></span>Held 0.6 s, needs 1.8 s</div>
+      <div class="display stamp">PASS</div>
+    </div>
+  </div></section>
+
+  <!-- 4 · results -->
+  <section class="scene" id="s4"><div class="stage">
+    <h2 class="display results">Print PDF. Social. <b>MP4 with music.</b></h2>
+    <div class="cards">
+      <figure style="--at: 13.729s"><img src="assets/jazz-a4.jpg" alt=""><figcaption>A4 · 300 dpi · PDF</figcaption></figure>
+      <figure style="--at: 14.237s"><img src="assets/wyprzedaz-story.jpg" alt=""><figcaption>Story · 1080 × 1920</figcaption></figure>
+      <figure style="--at: 14.746s">
+        <div class="video"><img src="assets/reveal.jpg" alt=""><div class="shade"></div><div class="play"></div><div class="wave" aria-hidden="true"></div><div class="bar"><i></i></div></div>
+        <figcaption>MP4 · 30 fps · music · poster as frame 0</figcaption>
+      </figure>
+    </div>
+  </div></section>
+
+  <!-- 5 · payoff -->
+  <section class="scene" id="s5">
+    <div class="payoff">
+      <div class="mark4"><i></i><i></i><i></i><i></i></div>
+      <h2 class="display word">Tilecast</h2>
+      <p class="tag">Design, by your coding agent.</p>
+      <div class="meta"><span>Claude Code plugin · MCP server</span><b>github.com/xeniak123/app</b></div>
+    </div>
+  </section>
+
+  <div class="grain"></div>
+
+  <audio data-tilecast src="audio/music.ogg" data-start="0" data-volume="0.8"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="0.2" data-volume="0.22"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="0.38" data-volume="0.18"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="0.55" data-volume="0.22"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="0.74" data-volume="0.18"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="0.9" data-volume="0.22"></audio>
+  <audio data-tilecast src="audio/click.ogg" data-start="1.28" data-volume="0.5"></audio>
+  <audio data-tilecast src="audio/whoosh.ogg" data-start="1.58" data-volume="0.45"></audio>
+  <audio data-tilecast src="audio/impact.ogg" data-start="2.034" data-volume="0.42"></audio>
+  <audio data-tilecast src="audio/pop.ogg" data-start="2.542" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/soft-hit.ogg" data-start="3.051" data-volume="0.6"></audio>
+  <audio data-tilecast src="audio/swipe.ogg" data-start="3.41" data-volume="0.3"></audio>
+  <audio data-tilecast src="audio/pop.ogg" data-start="4.068" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/whoosh.ogg" data-start="5.62" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="6.61" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="7.627" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/tick.ogg" data-start="8.644" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/pop.ogg" data-start="10.17" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/pop.ogg" data-start="10.678" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/pop.ogg" data-start="11.186" data-volume="0.35"></audio>
+  <audio data-tilecast src="audio/riser.ogg" data-start="10.203" data-volume="0.4"></audio>
+  <audio data-tilecast src="audio/soft-hit-2.ogg" data-start="12.203" data-volume="0.75"></audio>
+  <audio data-tilecast src="audio/whoosh.ogg" data-start="13.05" data-volume="0.3"></audio>
+  <audio data-tilecast src="audio/swipe.ogg" data-start="13.58" data-volume="0.28"></audio>
+  <audio data-tilecast src="audio/swipe.ogg" data-start="14.09" data-volume="0.28"></audio>
+  <audio data-tilecast src="audio/swipe.ogg" data-start="14.6" data-volume="0.28"></audio>
+  <audio data-tilecast src="audio/pop.ogg" data-start="15.0" data-volume="0.3"></audio>
+  <audio data-tilecast src="audio/impact.ogg" data-start="18.305" data-volume="0.55"></audio>
+  <audio data-tilecast src="audio/shimmer.ogg" data-start="18.62" data-volume="0.22"></audio>
+
+  <script>
+    const typed = document.querySelector('.typed');
+    const text = typed.dataset.text;
+    const wave = document.querySelector('.wave');
+    const seed = tilecast.random(11);
+    const bars = Array.from({ length: 48 }, () => 0.25 + seed() * 0.75);
+    wave.innerHTML = bars.map(() => '<i></i>').join('');
+    const waveBars = [...wave.children];
+    const progress = document.querySelector('.video .bar i');
+
+    tilecast.onFrame((t) => {
+      // The prompt types at a steady human pace.
+      typed.textContent = text.slice(0, Math.round(tilecast.tween(0.12, 0.8, 0, text.length, 'linear')));
+      // The little player in the results plays along with the beat.
+      const played = tilecast.progress(15.2, 2.9, 'linear');
+      progress.style.width = `${played * 100}%`;
+      const beat = Math.abs(Math.sin(((t - 14.746) / 0.5085) * Math.PI));
+      waveBars.forEach((bar, i) => {
+        const lit = i / waveBars.length < played;
+        bar.style.height = `${(bars[i] * (0.55 + 0.45 * beat)) * 100}%`;
+        bar.style.background = lit ? 'rgba(255,90,31,.9)' : 'rgba(244,241,234,.28)';
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{
+  "file": "music.ogg",
+  "style": "upbeat",
+  "bpm": 118,
+  "key": "F major",
+  "duration": 20.5,
+  "beat": 0.5085,
+  "strong": [
+    {
+      "t": 0,
+      "what": "start: the hook lands here"
+    },
+    {
+      "t": 2.034,
+      "what": "drop: the full beat comes in; put the reveal here"
+    },
+    {
+      "t": 12.203,
+      "what": "back in after the breakdown; a highlight or scene change"
+    },
+    {
+      "t": 18.305,
+      "what": "final hit: land the logo or payoff here; the music rings out after it"
+    }
+  ],
+  "sections": [
+    {
+      "name": "intro",
+      "start": 0,
+      "end": 2.034
+    },
+    {
+      "name": "groove",
+      "start": 2.034,
+      "end": 10.169
+    },
+    {
+      "name": "breakdown",
+      "start": 10.169,
+      "end": 12.203
+    },
+    {
+      "name": "groove",
+      "start": 12.203,
+      "end": 18.305
+    },
+    {
+      "name": "ending",
+      "start": 18.305,
+      "end": 20.5
+    }
+  ],
+  "downbeats": [
+    0,
+    2.034,
+    4.068,
+    6.102,
+    8.136,
+    10.169,
+    12.203,
+    14.237,
+    16.271,
+    18.305
+  ],
+  "beats": [
+    0,
+    0.508,
+    1.017,
+    1.525,
+    2.034,
+    2.542,
+    3.051,
+    3.559,
+    4.068,
+    4.576,
+    5.085,
+    5.593,
+    6.102,
+    6.61,
+    7.119,
+    7.627,
+    8.136,
+    8.644,
+    9.153,
+    9.661,
+    10.169,
+    10.678,
+    11.186,
+    11.695,
+    12.203,
+    12.712,
+    13.22,
+    13.729,
+    14.237,
+    14.746,
+    15.254,
+    15.763,
+    16.271,
+    16.78,
+    17.288,
+    17.797,
+    18.305
+  ]
+}

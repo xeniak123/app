@@ -1,14 +1,46 @@
 # Tilecast
 
-**Plakaty, posty, story i banery projektowane przez Twojego agenta AI.** Tilecast to serwer MCP, skill i plugin do Claude Code. Działa też z Codex, Cursorem i każdym innym klientem MCP.
+**Plakaty, ogłoszenia, posty i filmy promocyjne, które Twój agent AI projektuje od zera.** Tilecast to serwer MCP, skill i plugin do Claude Code. Działa też z Codex, Cursorem i każdym innym klientem MCP.
 
-Agent pisze treść jako kafelki (nagłówek, zdjęcie, cena, szczegóły, wezwanie do działania). Tilecast układa z nich jednocześnie plakat A4, post 1:1, story 9:16 i baner 16:9. Agent dostaje podgląd wszystkich formatów jako obraz, przestawia kafelki narzędziami i eksportuje PNG w pełnej rozdzielczości oraz samodzielne pliki HTML. Wszystko powstaje z kodu frontendu (HTML/CSS), więc tekst jest zawsze poprawny, ostry i edytowalny.
+Nie ma tu szablonów. Agent pisze każdą grafikę tak, jak pisze stronę internetową: jeden plik HTML/CSS skomponowany pod tę jedną wiadomość. Tilecast renderuje go w headless Chrome co do piksela i pokazuje agentowi podgląd. Krytyk projektu mierzy kontrast, ucięty tekst i czas czytania. Na koniec Tilecast eksportuje plakat do druku w 300 dpi (PNG + PDF), grafiki do social mediów i wideo MP4 z muzyką.
 
-![Podgląd, który agent dostaje po każdej zmianie](docs/agent-preview.png)
+Sposób pracy przy wideo (plan, hook w pierwszych 2 sekundach, czas na przeczytanie każdej linijki, klatka-okładka jako klatka 0) jest wzorowany na [/brag](https://github.com/latent-spaces/brag).
+
+![Trzy plakaty z przykładów: każdy w innym stylu](docs/posters.jpg)
+
+## Pokaz
+
+**Wideo launchowe** ([`examples/launch`](examples/launch)): 20 sekund, 1920×1080, muzyka i efekty zgrane z bitem. Agent zrobił je tymi samymi narzędziami, które opisuje ten plik.
+
+[![Wideo launchowe Tilecast (kliknij, żeby obejrzeć MP4)](docs/launch.jpg)](docs/launch.mp4)
+
+Tak wygląda podgląd filmu, który dostaje agent: każda scena po uspokojeniu się ruchu i każde cięcie w połowie przejścia.
+
+![Podgląd filmu dla agenta](docs/filmstrip.jpg)
+
+**Jeden projekt, wiele formatów.** Kompozycja używa jednostek względnych i `@media (aspect-ratio …)`, więc ten sam plik daje plakat A4, post 1:1 i story 9:16, a każdy format jest osobno skomponowany.
+
+![Plakat jazzowy w trzech formatach](docs/formats.jpg)
+
+Wydarzenia, kawiarnia i sklep w przykładach są fikcyjne.
+
+## Jak to działa
+
+1. **Plan.** Skill prowadzi agenta jak brag: najpierw fakty (tylko te podane przez użytkownika), jeden pomysł, hierarchia, paleta, a przy wideo storyboard z czasami scen i budżetem czytania.
+2. **Kompozycja od zera.** Agent pisze `tilecast/<nazwa>/<nazwa>.html`: zwykłą stronę z CSS, SVG, gradientami, maskami i animacjami. Fonty są wbudowane, ikony pochodzą z Lucide, a muzykę i efekty generuje Tilecast.
+3. **`preview`.** Agent dostaje obraz: wszystkie formaty obok siebie albo taśmę klatek filmu.
+4. **`check`.** Krytyk sprawdza gotowe piksele i zgłasza problemy do poprawy:
+   ```
+   FAIL: 2 error(s), 1 warning(s).
+     ✗ [story] Low contrast 1.6:1 (needs 3:1, busy background behind it): <em> "w parku"
+     ✗ [2.6s] "To zdanie ma dziesięć słów…" is readable for 1.1s but needs ~3.3s (11 words).
+     ! [2.2s] "Szybki błysk" flashes by (0.3s). Hold it or drop it.
+   ```
+5. **`render_image` / `render_video`.** PNG w pełnej rozdzielczości i PDF w dokładnym formacie papieru, albo MP4 (H.264 + AAC) z najlepszą klatką jako klatką 0. Dzięki temu miniatura na każdej platformie pokazuje najlepszy moment, a nie czarny ekran.
 
 ## Instalacja
 
-Do eksportu PNG potrzebny jest Node.js 20+ oraz Chrome, Chromium albo Edge. Eksport HTML działa bez przeglądarki.
+Potrzebny jest Node.js 20+ oraz Chrome, Chromium albo Edge. Do wideo potrzebny jest ffmpeg. Jeśli go nie ma, Tilecast przy pierwszym renderze pobierze statyczną wersję z npm do folderu cache.
 
 ### Claude Code: plugin (serwer MCP + skill)
 
@@ -17,7 +49,7 @@ Do eksportu PNG potrzebny jest Node.js 20+ oraz Chrome, Chromium albo Edge. Eksp
 /plugin install tilecast@tilecast
 ```
 
-Plugin dodaje serwer MCP `tilecast` oraz skill `/tilecast`. Skill uczy agenta, jak pisać kafelki i poprawiać projekt na podstawie podglądu. Wystarczy napisać np. „zrób plakat na koncert jazzowy w sobotę o 20:00 w Parku Miejskim”.
+Potem wystarczy napisać np. „zrób plakat na koncert jazzowy w sobotę o 19:00 w Parku Miejskim, wstęp wolny” albo „zrób wideo launchowe tego projektu”.
 
 ### Claude Code: sam serwer MCP
 
@@ -55,47 +87,79 @@ args = ["/pełna/ścieżka/tilecast/plugin/server/tilecast-mcp.mjs"]
 }
 ```
 
-Jeśli repozytorium jest publiczne, zamiast klonowania możesz użyć `npx -y github:xeniak123/app` jako komendy serwera.
+Agenci bez obsługi skilli dostają cały poradnik przez narzędzie `guide`, a skrócony kontrakt kompozycji serwer wysyła w swoich instrukcjach MCP. Jeśli repozytorium jest publiczne, zamiast klonowania możesz użyć `npx -y github:xeniak123/app` jako komendy serwera.
 
 ## Narzędzia MCP
 
 | Narzędzie | Co robi |
 | --- | --- |
-| `create_design` | tworzy projekt z kafelków (albo szkic z jednego zdania) i zwraca podgląd 4 formatów |
-| `update_design` | zmienia projekt: `swap_tiles`, `move_tile`, `set_tile`, `add_tile`, `remove_tile`, `set_style`, `set_palette`, `shuffle_art`, `next_layout`, `set_layout` |
-| `preview_design` | podgląd wszystkich formatów albo jednego w większym rozmiarze |
-| `export_design` | PNG (plakat 2480×3508 w 300 dpi, 1080×1080, 1080×1920, 1920×1080) + samodzielny HTML z animacją wejścia |
-| `list_designs`, `get_design` | lista zapisanych projektów i pełny JSON projektu |
+| `preview` | obraz kompozycji: formaty obok siebie albo taśma klatek filmu (sceny i cięcia) + szybka ocena krytyka |
+| `check` | krytyk: tekst poza kadrem, ucięty albo zasłonięty, kolizje, za mały tekst, kontrast mierzony na pikselach (także na zdjęciach i gradientach), brakujące fonty i obrazki, zasoby z sieci, błędy skryptów; w wideo czas czytania każdej linijki, błyski, pusty początek lub koniec, brak dźwięku i propozycja klatki-okładki |
+| `render_image` | PNG każdego formatu (A4/A3/A5 w 300 dpi + PDF w wymiarze papieru, social w natywnym rozmiarze) |
+| `render_video` | MP4 30 fps z miksem ścieżek `<audio data-tilecast>`, kolory BT.709, okładka jako klatka 0 i osobny `.jpg`; `quality: "draft"` renderuje szybką wersję w połowie rozmiaru |
+| `assets` | `list_fonts`, `find_icons` / `get_icons` (1854 ikony Lucide jako SVG), `make_music` (podkład z siatką beatów), `make_sfx` (whoosh, riser, impact…), `list_sfx` / `add_sfx` (efekty CC0), `list_formats` |
+| `guide` | poradnik: workflow, design, ruch, tony, audio, runtime |
 
-**Obrazki.** Kafelek „zdjęcie” bez prawdziwego zdjęcia dostaje wygenerowaną grafikę w kolorach projektu. To jeden z 12 motywów (promienie, fale, plamy, bauhaus, raster, paski, okręgi, łuki, gradient, konfetti, pejzaż, siatka) z ikoną pasującą do tematu: nutą przy koncercie, filiżanką przy kawiarni, czapką absolwenta przy kursie. Każdy nowy projekt dostaje inny obrazek. Agent może wybrać motyw i ikonę (`art`, `icon`) albo wylosować nowy obrazek (`shuffle_art`). Prawdziwe zdjęcie podaje ścieżką (`image_path`): Twoje albo takie, które sam wygenerował lub pobrał innym narzędziem.
+Formaty: `poster-a4` (1240×1754 → 2480×3508), `poster-a3`, `flyer-a5`, `square` (1080×1080), `portrait` (1080×1350), `story` (1080×1920), `landscape` (1920×1080), `og` (1200×630 → 2400×1260) albo dowolny `SZEROKOŚĆxWYSOKOŚĆ`, np. `1500x500`.
 
-![Każdy projekt z innym obrazkiem](docs/variety.png)
+## Kontrakt kompozycji
 
-Projekty zapisują się w folderze projektu jako `tilecast/<id>.tilecast.json`, więc można je commitować. Eksport trafia do `tilecast/export/<id>/` albo do wskazanego folderu w projekcie, np. `public/promo` w aplikacji webowej. Zdjęcia i logo agent podaje ścieżką (`image_path`), a trafiają do projektu jako osadzone dane.
+```html
+<meta name="tilecast:formats" content="poster-a4 square story">
+<meta name="tilecast:duration" content="18">          <!-- tylko wideo -->
+<meta name="tilecast:scenes" content="0 2.03 6.1 12.2 16.3">
+<meta name="tilecast:poster" content="5.4">
+...
+<audio data-tilecast src="audio/music.wav" data-start="0" data-volume="0.8"></audio>
+<script>
+  tilecast.onFrame((t) => { licznik.textContent = Math.round(tilecast.tween(7, 1.4, 0, 12480, 'outExpo')); });
+</script>
+```
 
-Zmienne środowiskowe (opcjonalne):
-- `TILECAST_CHROME`: ścieżka do przeglądarki, jeśli nie zostanie znaleziona automatycznie,
-- `TILECAST_PROJECT_DIR`: folder projektu. Domyślnie `CLAUDE_PROJECT_DIR`, a gdy go brak, bieżący katalog.
+- **Czas jest wirtualny.** Animacje CSS, Web Animations, `requestAnimationFrame`, timery, `Date` i `performance.now` idą za zegarem renderu, więc każda klatka jest czystą funkcją czasu. Tilecast może renderować klatki równolegle i skoczyć od razu do dowolnego momentu.
+- **Fonty** (21 rodzin na licencji OFL, z polskimi znakami) działają offline po samej nazwie: Inter, Bricolage Grotesque, Fraunces, Instrument Serif, Anton, Bebas Neue, Space Grotesk, JetBrains Mono i inne.
+- **Tekst dekoracyjny** (np. kod w tle, powtarzany napis) oznacza się `aria-hidden="true"`, a krytyk go pomija.
+- Pełny opis: [`plugin/skills/tilecast/references/runtime.md`](plugin/skills/tilecast/references/runtime.md).
 
-## Jak to działa
+## Muzyka i dźwięk
 
-- **Silnik układu** (`src/model/layout.ts`) dzieli płótno rekurencyjnie jak treemapa. Programowanie dynamiczne wybiera cięcia tak, żeby każdy kafelek dostał pasujący kształt (nagłówek szeroki, zdjęcie mniej więcej kwadratowe, przycisk płaski), bez dziur i nakładania się. Kolejność kafelków to kolejność czytania, więc zamiana dwóch kafelków zmienia układ we wszystkich formatach naraz.
-- **Renderer HTML** (`src/render/`) tworzy samodzielną stronę z osadzonymi czcionkami (łacińskie i środkowoeuropejskie znaki) oraz małym skryptem, który dobiera największy rozmiar tekstu mieszczący się w kafelku. Ten sam kod rysuje kafelki w edytorze.
-- **Zrzuty PNG** (`mcp/chrome.ts`) robi zainstalowany Chrome w trybie headless, sterowany przez protokół DevTools. Rozmiar jest zawsze dokładny, a zrzut powstaje dopiero po dopasowaniu tekstu. Serwer nie potrzebuje Puppeteera ani Playwrighta.
-- **Serwer MCP** (`mcp/`) jest spakowany do jednego pliku `plugin/server/tilecast-mcp.mjs` razem z zależnościami i czcionkami, więc plugin działa bez `npm install`.
-- **Generator obrazków** (`src/render/artwork.ts`) rysuje motyw jako SVG z ziarna losowania zapisanego w kafelku. Ten sam obrazek jest przekomponowany pod proporcje każdego formatu, więc kampania wygląda spójnie. Ikony pochodzą z [Lucide](https://lucide.dev) (licencja ISC).
-- **Kontrast** pilnuje czytelności: jeśli wybrany kolor tekstu (np. własny kolor marki) jest nieczytelny na tle, zmienia się na prawie czarny albo prawie biały.
+`make_music` generuje podkład dokładnie na długość filmu w jednym z pięciu stylów: `upbeat`, `chill`, `cinematic`, `driving`, `minimal`. Zwraca też siatkę beatów i mocne momenty: start, drop (tu wchodzi odsłona), powrót po przerwie i finałowe uderzenie (tu ląduje logo). Agent montuje film pod te momenty, jak brag. Wszystko powstaje w syntezatorze w kodzie, więc wolno tego używać bez żadnych licencji. Ten sam `seed` daje ten sam utwór.
 
-## Tilecast Studio (edytor wizualny)
+`make_sfx` generuje efekty (whoosh, swipe, riser, impact, sub-drop, pop, tick, shimmer), a `add_sfx` kopiuje nagrane efekty Kenney (CC0). Render miksuje wszystkie ścieżki, a limiter pilnuje, żeby miks się nie przesterował. Przykładowy film ma -16 LUFS i szczyt -0,7 dBFS.
 
-W repozytorium jest też edytor w przeglądarce, w którym kafelki przestawia się myszką i od razu widzi wszystkie formaty.
+## Przykłady
+
+| Folder | Co pokazuje |
+| --- | --- |
+| [`examples/jazz`](examples/jazz) | nocny plakat koncertu: księżyc jako płyta winylowa, tekst po okręgu w SVG, A4 + post + story |
+| [`examples/ziarno`](examples/ziarno) | elegancki, redakcyjny plakat otwarcia kawiarni (ton `polished`) |
+| [`examples/wyprzedaz`](examples/wyprzedaz) | głośna wyprzedaż (ton `chaotic`): obrócone taśmy, naklejka, raster |
+| [`examples/launch`](examples/launch) | wideo launchowe z planem (`plan.md`), muzyką, efektami i tekstem do posta (`share-copy.txt`) |
+
+Żeby wyrenderować przykład, poproś agenta o `render_image` albo `render_video` dla danego pliku. Wyniki trafiają do `export/` obok kompozycji.
+
+## Zmienne środowiskowe (opcjonalne)
+
+- `TILECAST_PROJECT_DIR`: folder projektu. Domyślnie `CLAUDE_PROJECT_DIR`, a gdy go brak, bieżący katalog. Kompozycje i wyniki renderu muszą leżeć w nim.
+- `TILECAST_CHROME`: ścieżka do przeglądarki, jeśli nie zostanie znaleziona automatycznie.
+- `TILECAST_FFMPEG`: ścieżka do ffmpeg. `TILECAST_NO_DOWNLOAD=1` wyłącza automatyczne pobieranie.
+- `TILECAST_CACHE`: folder cache (domyślnie `~/.cache/tilecast`, a w pluginie folder danych pluginu).
+
+## Ograniczenia
+
+- Muzyka z `make_music` to prosty syntezator. Brzmi jak porządny podkład, ale nie zastąpi utworu od kompozytora. Można podać własny plik.
+- Szybkość renderu zależy od komputera. Przykładowy film (20 s, 1080p, ciężkie efekty) renderował się około 85 sekund na 4 rdzeniach bez GPU. Prostsze kompozycje renderują się kilka razy szybciej.
+- PDF nie ma spadów. Jeśli drukarnia ich wymaga, trzeba rozciągnąć tła poza kadr i powiedzieć o tym drukarni.
+- Krytyk mierzy to, co da się zmierzyć: czytelność, układ i czas czytania. Oceny, czy projekt jest dobry, nie zastąpi, dlatego skill każe agentowi oglądać każdy podgląd.
+
+## Tilecast Studio (edytor kafelków)
+
+W repozytorium jest też starszy edytor w przeglądarce, w którym grafikę układa się z kafelków myszką. Nie jest potrzebny do pracy z agentem.
 
 ```bash
 npm install
 npm run dev   # http://localhost:5173
 ```
-
-W edytorze kafelka „zdjęcie” można wybrać motyw i ikonę albo kliknąć „Losuj inny obrazek”. Studio działa bez klucza. Z kluczem `ANTHROPIC_API_KEY` w pliku `.env` (zob. `.env.example`) potrafi też samo zaprojektować grafikę z opisu i zmieniać ją poleceniem.
 
 ![Tilecast Studio](docs/studio.png)
 
@@ -103,24 +167,21 @@ W edytorze kafelka „zdjęcie” można wybrać motyw i ikonę albo kliknąć �
 
 | Polecenie | Co robi |
 | --- | --- |
-| `npm test` | testy: silnik układu, renderer, serwer MCP (także spakowany, przez stdio) i zrzuty z Chrome |
+| `npm test` | testy: silnik (wirtualny czas, sceny, skala), krytyk, narzędzia MCP, render wideo z dźwiękiem, syntezator, spakowany serwer przez stdio |
 | `npm run typecheck` | sprawdzenie typów |
-| `npm run build:mcp` | przebudowanie `plugin/server/tilecast-mcp.mjs` razem z licencjami wbudowanych pakietów (`THIRD_PARTY_NOTICES.md`). Uruchom je po zmianach w `mcp/` lub `src/` i zacommituj wynik |
-| `npm run dev` / `npm run build` | Studio: serwer deweloperski / build produkcyjny |
+| `npm run build:mcp` | przebudowanie `plugin/server/tilecast-mcp.mjs` (serwer, fonty, ikony, efekty i poradnik w jednym pliku) oraz `THIRD_PARTY_NOTICES.md`. Uruchom je po zmianach w `mcp/` albo w skillu i zacommituj wynik |
 
 ```
-mcp/            serwer MCP: narzędzia, operacje na kafelkach, zapis projektów, Chrome
-plugin/         plugin Claude Code: manifest, .mcp.json, skill, spakowany serwer
-src/model/      typy, silnik układu, kolory, generator szkicu z opisu (+ testy)
-src/render/     wspólny renderer kafelków i samodzielny HTML
-src/components/ Studio (React)
-server/         endpointy AI dla Studio (Claude API)
+mcp/            serwer MCP: przeglądarka (DevTools), runtime z wirtualnym czasem, krytyk,
+                render obrazów i wideo, ffmpeg, syntezator muzyki, fonty, ikony, efekty
+plugin/         plugin Claude Code: manifest, .mcp.json, skill z poradnikami, spakowany serwer
+examples/       przykładowe kompozycje (plakaty i wideo)
+src/, server/   Tilecast Studio (edytor kafelków)
 ```
 
-## Co dalej
+## Podziękowania i licencje
 
-- Eksport MP4 z animacji kafelków.
-- Więcej formatów, np. okładka na Facebooka, LinkedIn, ulotka A5.
-- Zestaw marki (logo, kolory, fonty) zapamiętany w projekcie.
-- Serie grafik z arkusza, np. osobny plakat dla każdego produktu.
-- Otwieranie projektu z MCP w Studio, żeby człowiek mógł przeciągać kafelki, a agent widział zmiany.
+- Sposób pracy przy wideo, zasady i tony są adaptacją [/brag](https://github.com/latent-spaces/brag) autorstwa Shunit Haviv Hakimi (licencja MIT).
+- Nagrane efekty dźwiękowe: [Kenney](https://kenney.nl) (CC0).
+- Ikony: [Lucide](https://lucide.dev) (ISC). Fonty: [Fontsource](https://fontsource.org) (SIL Open Font License).
+- Pełna lista licencji wbudowanych pakietów: [`plugin/server/THIRD_PARTY_NOTICES.md`](plugin/server/THIRD_PARTY_NOTICES.md).

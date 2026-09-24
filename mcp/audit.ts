@@ -8,10 +8,21 @@ export interface Issue {
 }
 
 type Rgb = [number, number, number];
+type Rgba = [number, number, number, number];
 
-function parseColor(css: string): Rgb | null {
-  const match = css.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
-  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+function parseColor(css: string): Rgba | null {
+  const match = css.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+)(%?))?/i);
+  if (!match) return null;
+  const alpha = match[4] === undefined ? 1 : Number(match[4]) / (match[5] ? 100 : 1);
+  return [Number(match[1]), Number(match[2]), Number(match[3]), alpha];
+}
+
+/** A translucent text color as it lands on a background. */
+const over = ([r, g, b, a]: Rgba, bg: Rgb): Rgb => [r * a + bg[0] * (1 - a), g * a + bg[1] * (1 - a), b * a + bg[2] * (1 - a)];
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)] ?? 0;
 }
 
 function luminance([r, g, b]: Rgb): number {
@@ -29,6 +40,17 @@ function ratio(a: Rgb, b: Rgb): number {
 
 const distance = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
+/** Is this pixel a blend of the background and the ink (a glyph or its anti-aliased edge)? */
+function onTheWay(sample: Rgb, background: Rgb, ink: Rgb): boolean {
+  const v = [ink[0] - background[0], ink[1] - background[1], ink[2] - background[2]];
+  const length = v[0] ** 2 + v[1] ** 2 + v[2] ** 2;
+  if (length < 1) return false;
+  const t = ((sample[0] - background[0]) * v[0] + (sample[1] - background[1]) * v[1] + (sample[2] - background[2]) * v[2]) / length;
+  if (t < 0.2) return false;
+  const k = Math.min(1, t);
+  return distance(sample, [background[0] + v[0] * k, background[1] + v[1] * k, background[2] + v[2] * k]) < 36;
+}
+
 /**
  * Contrast of a text block measured on the rendered pixels: the background is
  * whatever under the text box is not text-colored, so photos and gradients count.
@@ -37,6 +59,7 @@ const distance = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] -
 export function measureContrast(text: TextInfo, pixels: Pixels, cssWidth: number): { ratio: number; busy: boolean } | null {
   const color = parseColor(text.color);
   if (!color) return null;
+  const colors = [color, ...(text.colors ?? []).map(parseColor).filter((c): c is Rgba => c !== null)];
   const scale = pixels.width / cssWidth;
   const [x, y, w, h] = text.rect.map((v) => v * scale);
   const left = Math.max(0, x);
@@ -44,26 +67,112 @@ export function measureContrast(text: TextInfo, pixels: Pixels, cssWidth: number
   const right = Math.min(pixels.width - 1, x + w);
   const bottom = Math.min(pixels.height - 1, y + h);
   if (right - left < 2 || bottom - top < 2) return null;
-  const cols = Math.max(6, Math.min(70, Math.round((right - left) / 3)));
-  const rows = Math.max(4, Math.min(40, Math.round((bottom - top) / 3)));
-  const ratios: number[] = [];
-  for (let i = 0; i < cols; i++) {
-    for (let j = 0; j < rows; j++) {
-      const sample = pixels.at(left + ((right - left) * (i + 0.5)) / cols, top + ((bottom - top) * (j + 0.5)) / rows);
-      if (distance(sample, color) > 48) ratios.push(ratio(sample, color));
+  // Long lines are judged in stretches about four letters high, so a shape behind
+  // just the end of a line still counts.
+  const slices = Math.max(1, Math.min(6, Math.floor((right - left) / Math.max(1, text.fontSize * scale * 4))));
+  let worst: { ratio: number; busy: boolean } | null = null;
+  for (let s = 0; s < slices; s++) {
+    const sliceLeft = left + ((right - left) * s) / slices;
+    const sliceRight = left + ((right - left) * (s + 1)) / slices;
+    const cols = Math.max(6, Math.min(40, Math.round((sliceRight - sliceLeft) / 3)));
+    const rows = Math.max(4, Math.min(40, Math.round((bottom - top) / 3)));
+    const samples: Rgb[] = [];
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        samples.push(pixels.at(sliceLeft + ((sliceRight - sliceLeft) * (i + 0.5)) / cols, top + ((bottom - top) * (j + 0.5)) / rows));
+      }
     }
+    // Letters cover less than half of their box, so the median sample is the background;
+    // translucent text is judged as it looks on it.
+    const background: Rgb = [0, 1, 2].map((c) => median(samples.map((sample) => sample[c]))) as Rgb;
+    const ink = over(color, background);
+    if (distance(background, ink) < 40) {
+      // The text has almost the color of what is behind it.
+      const faint = { ratio: ratio(background, ink), busy: false };
+      if (!worst || faint.ratio < worst.ratio) worst = faint;
+      continue;
+    }
+    // Glyphs and their anti-aliased edges lie between the background and a text color;
+    // everything else in the box is background.
+    const inks = colors.map((c) => over(c, background));
+    const ratios = samples.filter((sample) => !inks.some((c) => onTheWay(sample, background, c))).map((sample) => ratio(sample, ink));
+    if (ratios.length < 8) continue;
+    ratios.sort((a, b) => a - b);
+    const low = ratios[Math.floor(ratios.length * 0.2)];
+    const high = ratios[Math.floor(ratios.length * 0.9)];
+    if (!worst || low < worst.ratio) worst = { ratio: low, busy: high / low > 2.5 };
   }
-  if (ratios.length < 8) return null;
-  ratios.sort((a, b) => a - b);
-  const low = ratios[Math.floor(ratios.length * 0.2)];
-  const high = ratios[Math.floor(ratios.length * 0.9)];
-  return { ratio: low, busy: high / low > 2.5 };
+  return worst;
 }
 
-const overlapShare = (a: TextInfo['rect'], b: TextInfo['rect']) => {
-  const x = Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0]));
-  const y = Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
-  return (x * y) / Math.max(1, Math.min(a[2] * a[3], b[2] * b[3]));
+type Point = [number, number];
+
+/**
+ * The part of a text box the letters actually cover, as a polygon: line boxes of
+ * big type carry a lot of empty ascent and descent, and tilted text is a tilted box.
+ */
+function ink(text: TextInfo): Point[] {
+  const [x, y, w, h] = text.rect;
+  const corners: Point[] = text.quad ?? [
+    [x, y],
+    [x + w, y],
+    [x + w, y + h],
+    [x, y + h],
+  ];
+  const height = Math.hypot(corners[3][0] - corners[0][0], corners[3][1] - corners[0][1]) || 1;
+  const t = Math.min(0.16 * text.fontSize, height * 0.25) / height;
+  const toward = (a: Point, b: Point): Point => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const [tl, tr, br, bl] = corners;
+  return [toward(tl, bl), toward(tr, br), toward(br, tr), toward(bl, tl)];
+}
+
+function area(polygon: Point[]): number {
+  let sum = 0;
+  for (let i = 0; i < polygon.length; i++) {
+    const [x1, y1] = polygon[i];
+    const [x2, y2] = polygon[(i + 1) % polygon.length];
+    sum += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(sum) / 2;
+}
+
+/** Intersection of two convex polygons (Sutherland–Hodgman). */
+function intersect(subject: Point[], clip: Point[]): Point[] {
+  const orientation = Math.sign(
+    clip.reduce((sum, [x1, y1], i) => {
+      const [x2, y2] = clip[(i + 1) % clip.length];
+      return sum + (x1 * y2 - x2 * y1);
+    }, 0),
+  );
+  let output = subject;
+  for (let i = 0; i < clip.length && output.length; i++) {
+    const [ax, ay] = clip[i];
+    const [bx, by] = clip[(i + 1) % clip.length];
+    const inside = ([px, py]: Point) => orientation * ((bx - ax) * (py - ay) - (by - ay) * (px - ax)) >= 0;
+    const cross = ([px, py]: Point, [qx, qy]: Point): Point => {
+      const d1 = (bx - ax) * (py - ay) - (by - ay) * (px - ax);
+      const d2 = (bx - ax) * (qy - ay) - (by - ay) * (qx - ax);
+      const k = d1 / (d1 - d2 || 1);
+      return [px + (qx - px) * k, py + (qy - py) * k];
+    };
+    const input = output;
+    output = [];
+    input.forEach((current, j) => {
+      const previous = input[(j + input.length - 1) % input.length];
+      if (inside(current)) {
+        if (!inside(previous)) output.push(cross(previous, current));
+        output.push(current);
+      } else if (inside(previous)) {
+        output.push(cross(previous, current));
+      }
+    });
+  }
+  return output;
+}
+
+const overlapShare = (a: Point[], b: Point[]) => {
+  const shared = intersect(a, b);
+  return shared.length < 3 ? 0 : area(shared) / Math.max(1, Math.min(area(a), area(b)));
 };
 
 const nested = (a: string, b: string) => a.startsWith(`${b}/`) || b.startsWith(`${a}/`);
@@ -110,7 +219,7 @@ export function frameIssues(audit: AuditResult, pixels: Pixels | null, where: st
   for (let i = 0; i < solid.length; i++) {
     for (let j = i + 1; j < solid.length; j++) {
       if (nested(solid[i].key, solid[j].key)) continue;
-      if (overlapShare(solid[i].rect, solid[j].rect) > 0.12) {
+      if (overlapShare(ink(solid[i]), ink(solid[j])) > 0.12) {
         issues.push({ level: 'warning', where, message: `Text collides with other text: ${solid[i].desc} ↔ ${solid[j].desc}` });
       }
     }

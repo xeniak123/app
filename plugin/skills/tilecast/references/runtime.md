@@ -113,3 +113,4 @@ Any other font needs a file in the project and an `@font-face` rule. Never link 
 - Don't rely on scrolling, hover, `:focus` or user input; there is none.
 - Don't use `Math.random()` or wall-clock time; use `tilecast.random(seed)` and `tilecast.time`.
 - Keep everything inside the canvas unless it is meant to bleed off the edge (decoration). Text that runs off is an error.
+- Text that is only texture (a giant outlined word bleeding off the edge, code scrolling behind a scene, a repeated pattern of words) gets `aria-hidden="true"` or `data-texture`: the critic then skips it for overflow, contrast and reading time. Never mark text people need to read.

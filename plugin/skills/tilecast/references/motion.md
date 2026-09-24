@@ -102,6 +102,8 @@ tilecast.onFrame((t) => {
 
 **Background life:** a slowly drifting gradient, grain, a rotating shape (infinite CSS animations are fine: they are positioned by time too).
 
+**Texture text:** code scrolling behind a scene or a ticker of words is texture, not copy: mark it `aria-hidden="true"` so the reading-time check ignores it. Everything the viewer must read still follows the reading budget.
+
 ## Transitions
 
 - **Hard cut on a beat** with a soft hit: the default for energy.

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="tilecast:formats" content="square story poster-a4">
+<title>Wyprzedaż -40%</title>
+<style>
+  /* Tone: chaotic. Concept: the number is the poster; warning tape crosses it. */
+  :root { --acid: #e6ff2b; --pink: #ff2e88; --ink: #0d0d0d; --paper: #f4f1ea; --u: 1vmin; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+  body { position: relative; background: var(--acid); color: var(--ink); font-family: 'Archivo', sans-serif; }
+
+  .dots { position: absolute; inset: 0; opacity: .22;
+    background: radial-gradient(circle, var(--ink) 22%, transparent 24%) 0 0 / calc(2.4 * var(--u)) calc(2.4 * var(--u));
+    -webkit-mask: linear-gradient(135deg, #000 0%, transparent 55%); mask: linear-gradient(135deg, #000 0%, transparent 55%); }
+
+  .top { position: absolute; top: calc(6 * var(--u)); left: calc(6 * var(--u)); right: calc(6 * var(--u));
+    display: flex; justify-content: space-between; align-items: flex-start;
+    font: 800 calc(3 * var(--u)) / 1 'Archivo', sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  .top b { font: 400 calc(7 * var(--u)) / .9 'Anton', sans-serif; letter-spacing: .01em; }
+  .top span { text-align: right; line-height: 1.15; }
+
+  .big { position: absolute; left: 50%; top: 45%; margin: 0; transform: translate(-50%, -50%) rotate(-6deg);
+    font: 400 calc(44 * var(--u)) / .8 'Anton', sans-serif; letter-spacing: -0.01em; color: var(--ink); white-space: nowrap;
+    animation: slam .5s cubic-bezier(.16,1,.3,1) .1s both; }
+  .big small { font-size: .5em; vertical-align: .72em; margin-left: .03em; }
+
+  .tape { position: absolute; left: -10%; width: 120%; height: calc(8 * var(--u)); background: var(--ink); color: var(--acid);
+    display: flex; align-items: center; overflow: hidden; white-space: nowrap;
+    font: 400 calc(4.6 * var(--u)) / 1 'Anton', sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+  .tape.one { top: 19%; transform: rotate(7deg); animation: slide 8s linear infinite; }
+  .tape.two { bottom: 22%; transform: rotate(-4deg); background: var(--pink); color: var(--ink); animation: slide 8s linear infinite reverse; }
+
+  .sticker { position: absolute; right: calc(5 * var(--u)); bottom: 13%; width: calc(27 * var(--u)); aspect-ratio: 1; border-radius: 50%;
+    background: var(--pink); color: var(--ink); display: grid; place-content: center; text-align: center; transform: rotate(12deg);
+    box-shadow: calc(.8 * var(--u)) calc(.8 * var(--u)) 0 var(--ink);
+    font: 400 calc(6.2 * var(--u)) / 1.08 'Anton', sans-serif; text-transform: uppercase;
+    animation: pop .45s cubic-bezier(.34,1.56,.64,1) .45s both; }
+  .sticker small { display: block; font: 800 calc(2.4 * var(--u)) / 1.1 'Archivo', sans-serif; letter-spacing: .06em; margin-top: calc(.8 * var(--u)); }
+
+  .bottom { position: absolute; left: calc(6 * var(--u)); right: calc(6 * var(--u)); bottom: calc(6 * var(--u));
+    display: flex; justify-content: space-between; align-items: flex-end; gap: calc(4 * var(--u));
+    font: 800 calc(3.2 * var(--u)) / 1.15 'Archivo', sans-serif; text-transform: uppercase; }
+  .bottom .shop { font: 400 calc(6.4 * var(--u)) / .9 'Anton', sans-serif; letter-spacing: .01em; }
+  .bottom .addr { text-align: left; }
+
+  @keyframes slam { from { transform: translate(-50%, -50%) rotate(-6deg) scale(1.6); opacity: 0; } }
+  @keyframes pop { from { transform: rotate(12deg) scale(0); } }
+  @keyframes slide { to { text-indent: calc(-60 * var(--u)); } }
+
+  @media (aspect-ratio > 0.9) {
+    .sticker { bottom: 10%; right: calc(4 * var(--u)); }
+  }
+  /* Story: the same poster restacked, clear of the app bars. */
+  @media (aspect-ratio < 0.62) {
+    .top { top: 13%; }
+    .big { top: 46%; }
+    .tape.one { top: 26%; }
+    .tape.two { bottom: 33%; }
+    .sticker { bottom: 23%; width: calc(30 * var(--u)); }
+    .bottom { bottom: 19%; flex-direction: column; align-items: flex-start; gap: calc(2 * var(--u)); right: 45%; }
+  }
+  /* A4: a little more air between the bands. */
+  @media (aspect-ratio > 0.62) and (aspect-ratio < 0.9) {
+    .tape.one { top: 21%; }
+    .tape.two { bottom: 26%; }
+    .sticker { bottom: 17%; }
+  }
+</style>
+</head>
+<body>
+  <div class="dots"></div>
+  <div class="top"><b>Wyprzedaż</b><span>Na wszystko<br>w sklepie</span></div>
+  <div class="tape one" aria-hidden="true">Tylko 3 dni ✶ Tylko 3 dni ✶ Tylko 3 dni ✶ Tylko 3 dni ✶ Tylko 3 dni ✶ Tylko 3 dni ✶ Tylko 3 dni ✶</div>
+  <p class="big">-40<small>%</small></p>
+  <div class="tape two" aria-hidden="true">Buty ✶ Bluzy ✶ Plecaki ✶ Czapki ✶ Buty ✶ Bluzy ✶ Plecaki ✶ Czapki ✶ Buty ✶ Bluzy ✶ Plecaki ✶</div>
+  <div class="sticker">17–19<br>paź<small>pt · sob · nd</small></div>
+  <div class="bottom"><div class="shop">Bieg</div><div class="addr">ul. Mostowa 3 · 10:00–20:00</div></div>
+</body>
+</html>

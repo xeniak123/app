@@ -27,6 +27,8 @@ export interface TextInfo {
   words: number;
   /** x, y, width, height of the rendered text, in CSS pixels. */
   rect: [number, number, number, number];
+  /** Corners (top-left, top-right, bottom-right, bottom-left) when the element is rotated or skewed. */
+  quad: [number, number][] | null;
   /** Effective opacity: ancestors' opacity, visibility, and how much of it other opaque elements cover. */
   opacity: number;
   /** Share of the text inside the canvas, 0..1. */
@@ -34,6 +36,8 @@ export interface TextInfo {
   /** 'self' when the element's own overflow cuts its text, else the clipping ancestor. */
   clippedBy: string | null;
   color: string;
+  /** Every text color inside the block (highlighted words, links). */
+  colors: string[];
   fontSize: number;
   fontWeight: number;
   family: string;
@@ -340,20 +344,24 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'TITLE', 'HEAD', 'OPTION']);
   const INLINE = new Set(['inline', 'inline-block', 'inline-flex', 'inline-grid', 'contents', 'ruby']);
 
-  /** Text blocks: the nearest block-level element around each run of visible text. */
-  function blocks(): Element[] {
-    const found = new Set<Element>();
+  /** Text blocks: the nearest block-level element around each run of visible text, with its own text nodes. */
+  function blocks(): Map<Element, Text[]> {
+    const found = new Map<Element, Text[]>();
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (!node.nodeValue?.trim()) continue;
       let el = node.parentElement;
       if (!el || SKIP.has(el.tagName) || el.closest('svg defs, svg title')) continue;
+      // Decorative text (a giant outlined word, code scrolling behind) is marked and not judged.
+      if (el.closest('[aria-hidden="true"], [data-texture]')) continue;
       while (el.parentElement && el.parentElement !== document.body && INLINE.has(getComputedStyle(el).display)) {
         el = el.parentElement;
       }
-      found.add(el);
+      const nodes = found.get(el) ?? [];
+      nodes.push(node as Text);
+      found.set(el, nodes);
     }
-    return [...found];
+    return found;
   }
 
   function keyOf(el: Element): string {
@@ -363,6 +371,11 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
       parts.unshift(`${n.tagName.toLowerCase()}${parent ? [...parent.children].indexOf(n) : 0}`);
     }
     return parts.join('/');
+  }
+
+  /** Words a reader reads: separators like "·" or "—" don't count. */
+  function countWords(text: string): number {
+    return text.split(/\s+/).filter((token) => /[\p{L}\p{N}]/u.test(token)).length;
   }
 
   function textOf(el: Element): string {
@@ -387,10 +400,14 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
     return getComputedStyle(el).visibility === 'hidden' ? 0 : opacity;
   }
 
-  function textRect(el: Element): DOMRect | null {
+  /** Where the letters are: the text nodes' own boxes, not icons, badges or child blocks around them. */
+  function textRect(nodes: Text[]): DOMRect | null {
     const range = document.createRange();
-    range.selectNodeContents(el);
-    const rects = [...range.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0.5);
+    const rects: DOMRect[] = [];
+    for (const node of nodes) {
+      range.selectNodeContents(node);
+      for (const r of range.getClientRects()) if (r.width > 0.5 && r.height > 0.5) rects.push(r);
+    }
     if (!rects.length) return null;
     const left = Math.min(...rects.map((r) => r.left));
     const top = Math.min(...rects.map((r) => r.top));
@@ -444,6 +461,37 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
     return tested ? covered / tested : 0;
   }
 
+  /**
+   * The four corners of the text when the element itself is rotated or skewed:
+   * the bounding rectangle of tilted text is much bigger than the text.
+   */
+  function textQuad(el: Element, nodes: Text[]): [number, number][] | null {
+    const cs = getComputedStyle(el);
+    if (cs.transform === 'none') return null;
+    const m = new DOMMatrix(cs.transform);
+    if (Math.abs(m.b) < 1e-3 && Math.abs(m.c) < 1e-3) return null;
+    const html = el as HTMLElement;
+    const previous = html.style.getPropertyValue('transform');
+    const priority = html.style.getPropertyPriority('transform');
+    // An !important inline value wins over animations, so the untransformed box can be measured.
+    html.style.setProperty('transform', 'none', 'important');
+    const box = el.getBoundingClientRect();
+    const r = textRect(nodes);
+    html.style.setProperty('transform', previous, priority);
+    if (!r) return null;
+    const [ox, oy] = cs.transformOrigin.split(' ').map(parseFloat);
+    const origin = { x: box.left + ox, y: box.top + oy };
+    return [
+      [r.left, r.top],
+      [r.right, r.top],
+      [r.right, r.bottom],
+      [r.left, r.bottom],
+    ].map(([x, y]) => {
+      const p = m.transformPoint(new DOMPoint(x - origin.x, y - origin.y));
+      return [p.x + origin.x, p.y + origin.y] as [number, number];
+    });
+  }
+
   function insideShare(r: DOMRect): number {
     const x = Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0));
     const y = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
@@ -469,13 +517,22 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
   }
 
   const probe = document.createElement('canvas').getContext('2d');
-  function fontAvailable(family: string): boolean {
+  /** Is this family (in this weight and style) really drawn, or does the browser fall back? */
+  async function fontAvailable(family: string, weight: string, style: string): Promise<boolean> {
     if (!probe || /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|emoji|math|ui-[a-z-]+)$/i.test(family)) return true;
+    const spec = `${style} ${weight} 72px "${family}"`;
+    try {
+      // A web font (bundled or @font-face) loads here, even a weight nothing has drawn yet.
+      if ((await document.fonts.load(spec, 'Tilecast ąę')).length) return true;
+    } catch {
+      // An unparsable family name falls through to the measurement.
+    }
+    // Installed system fonts: compare metrics against two different fallbacks.
     const sample = 'Tilecast QWxyz 0123 ąęśż';
     return ['monospace', 'serif'].some((fallback) => {
-      probe.font = `72px ${fallback}`;
+      probe.font = `${style} ${weight} 72px ${fallback}`;
       const base = probe.measureText(sample).width;
-      probe.font = `72px "${family}", ${fallback}`;
+      probe.font = `${spec}, ${fallback}`;
       return probe.measureText(sample).width !== base;
     });
   }
@@ -484,36 +541,46 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
     return (stack.split(',')[0] ?? '').trim().replace(/^["']|["']$/g, '');
   }
 
-  function audit() {
-    const texts = blocks().flatMap((el) => {
-      const r = textRect(el);
+  async function audit() {
+    const faces = new Map<string, [string, string, string]>();
+    const texts = [...blocks()].flatMap(([el, nodes]) => {
+      const r = textRect(nodes);
       if (!r) return [];
       const cs = getComputedStyle(el);
+      const family = firstFamily(cs.fontFamily);
+      faces.set(`${family}|${cs.fontWeight}|${cs.fontStyle}`, [family, cs.fontWeight, cs.fontStyle]);
       const text = textOf(el);
+      // Every color the block's letters use: a highlighted word is text, not background.
+      const colors = [...new Set(nodes.map((node) => getComputedStyle(node.parentElement!).color))];
       return [
         {
           key: keyOf(el),
           desc: describe(el),
           text: text.slice(0, 160),
-          words: text.split(/\s+/).filter(Boolean).length,
+          words: countWords(text),
           rect: [r.left, r.top, r.width, r.height],
+          quad: textQuad(el, nodes),
           opacity: opacityOf(el) * (1 - coveredShare(el, r)),
           inside: insideShare(r),
           clippedBy: clippedBy(el, r),
           color: cs.color,
+          colors,
           fontSize: parseFloat(cs.fontSize),
           fontWeight: Number(cs.fontWeight) || 400,
           family: firstFamily(cs.fontFamily),
         },
       ];
     });
-    const families = [...new Set(texts.map((t) => t.family))];
+    const missing = new Set<string>();
+    for (const [family, weight, style] of faces.values()) {
+      if (family && !missing.has(family) && !(await fontAvailable(family, weight, style))) missing.add(family);
+    }
     return {
       width: innerWidth,
       height: innerHeight,
       texts,
       brokenImages: [...document.images].filter((img) => img.complete && img.naturalWidth === 0).map((img) => img.getAttribute('src') ?? ''),
-      missingFonts: families.filter((family) => family && !fontAvailable(family)),
+      missingFonts: [...missing],
       external: performance
         .getEntriesByType('resource')
         .map((entry) => entry.name)
@@ -524,14 +591,14 @@ function tilecastRuntime(config: { fonts: RuntimeFont[] }) {
 
   /** Fast per-frame sample of every text block, for timeline checks. */
   function sample() {
-    return blocks().flatMap((el) => {
-      const r = textRect(el);
+    return [...blocks()].flatMap(([el, nodes]) => {
+      const r = textRect(nodes);
       if (!r) return [];
       const text = textOf(el);
       const opacity = opacityOf(el);
       const visible = opacity > 0.01 ? opacity * (1 - coveredShare(el, r)) : 0;
       const fontSize = parseFloat(getComputedStyle(el).fontSize) || 16;
-      return [[keyOf(el), text.split(/\s+/).filter(Boolean).length, visible, insideShare(r), r.left, r.top, r.width, r.height, text.slice(0, 80), fontSize]];
+      return [[keyOf(el), countWords(text), visible, insideShare(r), r.left, r.top, r.width, r.height, text.slice(0, 80), fontSize]];
     });
   }
 

@@ -42,6 +42,7 @@ Use CSS grid with named areas for structure, `position: absolute` for deliberate
 - Numbers: `font-variant-numeric: tabular-nums` in lists and schedules; lining figures in big numbers.
 - Italic or a second color for the one word that carries the emotion ("Jazz *w parku*"), not for decoration.
 - Polish and other accented text: every bundled family covers Latin Extended (except Permanent Marker, Latin only). The critic flags missing glyph fonts.
+- Tight leading and accented capitals don't mix: at line-height below 1, the accents of Ż, Ź, Ś, Ć, Ń, Ó (and É, Ü…) run into the line above and can vanish behind it. Give lines with accented capitals at least 1.0–1.1, and look at them in the preview.
 - Optical alignment: very large type needs a small negative left margin (about -0.04em) to line up with smaller text below it.
 
 ## Color
@@ -70,7 +71,7 @@ Use the real thing first: the user's photos, the product UI (rebuild it with the
 - **Grain:** an SVG `feTurbulence` noise as a data URL in a full-canvas overlay at 5–10% opacity with `mix-blend-mode: overlay` or `multiply`.
 - **Halftone and patterns:** `radial-gradient` dot grids, `repeating-linear-gradient` stripes, checkerboards.
 - **Duotone photos:** `filter: grayscale(1) contrast(1.1)` plus a colored layer with `mix-blend-mode: multiply` or `screen`.
-- **Type as texture:** a word repeated in outline (`-webkit-text-stroke`) behind the headline; text filled with an image or gradient (`background-clip: text`).
+- **Type as texture:** a word repeated in outline (`-webkit-text-stroke`) behind the headline; text filled with an image or gradient (`background-clip: text`). Mark decorative text `aria-hidden="true"` so the critic doesn't judge it as copy.
 - **Icons as illustration:** a Lucide icon (`assets` `find_icons`, `get_icons`) drawn huge with a thin stroke (1–1.5) reads as a graphic, not as clip art. Never icons in little colored circles.
 - **Product mockups:** a phone or browser frame drawn in CSS around the real UI, with a soft layered shadow.
 

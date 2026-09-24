@@ -248,7 +248,8 @@ describe('MCP server', () => {
     const client = new Client({ name: 'test', version: '1.0.0' });
     await client.connect(clientSide);
     try {
-      expect(client.getInstructions()).toContain('There are no templates');
+      expect(client.getInstructions()).toContain('No templates: compose each piece from scratch');
+      expect(client.getInstructions()!.length).toBeLessThan(2000);
       const { tools } = await client.listTools();
       expect(tools.map((t) => t.name)).toEqual(['preview', 'check', 'render_image', 'render_video', 'assets', 'guide']);
       const guide = (await client.callTool({ name: 'guide', arguments: { topic: 'workflow' } })) as { content: { text: string }[] };

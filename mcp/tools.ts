@@ -6,20 +6,18 @@ import { MUSIC_STYLES, type MusicStyle } from './music';
 import type { Progress, TilecastService, ToolResult } from './service';
 import { VERSION } from './version';
 
-export const INSTRUCTIONS = `Tilecast turns HTML and CSS that you write into posters, flyers, announcements, social posts and videos. There are no templates: each piece is a small web page composed from scratch for this one message, rendered pixel-exact by headless Chrome.
+export const INSTRUCTIONS = `Tilecast turns HTML/CSS you write into posters, flyers, announcements, social posts and videos. No templates: compose each piece from scratch as one web page for this message; headless Chrome renders it pixel-exact.
 
-Workflow: (1) Write one self-contained .html composition per piece (e.g. promo/launch/launch.html) with its images and sounds beside it. (2) preview: look at the stills and fix what you see. (3) check: the design critic; fix every ✗ it reports. (4) render_image (PNG, print PDF) or render_video (MP4 whose frame 0 is the best frame). For the full playbook (design, motion, tones, audio), call guide.
+Loop: write tilecast/<slug>/<slug>.html → preview (look, fix) → check (the design critic; fix every ✗) → render_image (PNG, print PDF) or render_video (MP4, best frame as frame 0). Call guide (workflow, design, motion, tones, audio, runtime) for the full playbook.
 
-Composition contract:
-- The viewport is the canvas: poster-a4 1240×1754 CSS px (exported ×2 = 300 dpi), poster-a3, flyer-a5, square 1080×1080, portrait 1080×1350, story 1080×1920, landscape 1920×1080, og 1200×630, or any "WIDTHxHEIGHT". Size everything relative to the canvas (vw, vh, vmin, %, clamp) so one file serves several formats; switch layouts with @media (aspect-ratio …). html and body fill the canvas with overflow: hidden.
-- <meta name="tilecast:formats" content="poster-a4 square story"> sets the default formats.
-- Video: <meta name="tilecast:duration" content="18"> in seconds, optional tilecast:fps (default 30), tilecast:scenes (scene start times, e.g. "0 2.5 6 11 15") and tilecast:poster (thumbnail time).
-- Time is virtual; every frame is a pure function of time. CSS animations and transitions (schedule them with animation-delay), the Web Animations API, requestAnimationFrame, timers, Date and performance.now all follow the render clock. tilecast.onFrame((t) => …) runs on every frame with t in seconds; tilecast.time reads the clock. Use a fixed seed for any randomness.
-- Fonts: bundled families work offline by name (assets list_fonts), e.g. Inter, Bricolage Grotesque, Fraunces, Unbounded, Syne, Instrument Serif, Anton, Bebas Neue, Space Grotesk, JetBrains Mono. Other fonts need a local file and @font-face. No network fonts, CDNs or remote images.
-- Media: local files by relative path. <video> elements follow the timeline (data-start offsets them). Icons: assets find_icons and get_icons (Lucide SVG).
-- Sound (video): <audio data-tilecast src="sfx/soft-hit.ogg" data-start="2.4" data-volume="0.5"> with optional data-fade-in, data-fade-out, data-trim, data-duration and loop. assets make_music writes a music bed with its beat grid; list_sfx and add_sfx give effects.
+Contract:
+- The viewport is the canvas: poster-a4 1240×1754 (exported ×2 = 300 dpi), square 1080×1080, portrait 1080×1350, story 1080×1920, landscape 1920×1080, og 1200×630, or "WxH". Size relative to it (vmin, %, clamp), switch layouts with @media (aspect-ratio …); html, body fill it with overflow hidden.
+- <meta name="tilecast:formats" content="poster-a4 square story">. Video: tilecast:duration (s), optional tilecast:fps, tilecast:scenes (start times), tilecast:poster.
+- Time is virtual; each frame is a pure function of time. Schedule CSS animations with absolute delays; rAF, timers, Date follow the clock; tilecast.onFrame(t => …) for computed motion; tilecast.tween/progress/random helpers.
+- Bundled fonts by name, offline (assets list_fonts). Local files only: no CDNs or remote images. Icons: assets find_icons/get_icons.
+- Sound: <audio data-tilecast src="…" data-start="2.4" data-volume="0.5">; assets make_music (beat grid, cues), make_sfx, add_sfx.
 
-The bar: design like a top studio, never like a template. One idea, one focal point, a huge headline, a deliberate grid, few colors, real content only (never invent prices, dates, addresses or links). Video: the hook lands in the first 2 seconds, 15–25 seconds total, every line held long enough to read (~0.3 s per word), pace from motion and cuts, every frame postable.`;
+Bar: one idea, a huge headline, a deliberate grid, few colors, only facts the user gave. Video: hook in 2 s, 15–25 s, ~0.3 s per word held on screen, every frame postable.`;
 
 const file = z.string().describe('The composition: an .html file inside the project, e.g. "promo/launch/launch.html".');
 const formats = z

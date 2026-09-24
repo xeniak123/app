@@ -22,7 +22,11 @@ Tak wygląda podgląd filmu, który dostaje agent: każda scena po uspokojeniu s
 
 ![Plakat jazzowy w trzech formatach](docs/formats.jpg)
 
-Wydarzenia, kawiarnia i sklep w przykładach są fikcyjne.
+**Test na świeżym agencie.** Czysta sesja Claude Code z zainstalowanym pluginem dostała tylko zlecenie: „Zrób plakat A4 i post kwadratowy na warsztaty ceramiki: sobota 18 października, 11:00–15:00, Pracownia Glina, ul. Ogrodowa 12, Poznań. Koszt 120 zł, materiały w cenie. Zapisy: glina.pl. Wyrenderuj gotowe pliki.” Agent sam napisał plan i kompozycję, poprawił kontrast wskazany przez krytyka, wyrenderował PNG, PDF i tekst do posta. Zajęło mu to 18 kroków i około 2,5 minuty.
+
+![Plakat zrobiony przez świeżego agenta](docs/agent-test.jpg)
+
+Wydarzenia, kawiarnia, pracownia i sklep w przykładach są fikcyjne.
 
 ## Jak to działa
 

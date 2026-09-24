@@ -76,7 +76,7 @@ For a video, also:
 
 **Read:** [references/design.md](references/design.md) every time; [references/motion.md](references/motion.md) for any video or animated piece; [references/runtime.md](references/runtime.md) for the composition contract; [references/tones.md](references/tones.md) for the chosen tone.
 
-Write `tilecast/<slug>/<slug>.html` from scratch: one self-contained page, the canvas is the viewport, sizes relative to the canvas so the same file serves every format you planned. Put `<meta name="tilecast:formats" content="…">` in it; for a video also `tilecast:duration`, `tilecast:scenes` and, once you know it, `tilecast:poster`.
+Write `tilecast/<slug>/<slug>.html` from scratch: one self-contained page, the canvas is the viewport, sizes relative to the canvas so the same file serves every format you planned. The plan is the contract: if a better idea comes up while composing, update `plan.md` so the concept and the page still agree. Put `<meta name="tilecast:formats" content="…">` in it; for a video also `tilecast:duration`, `tilecast:scenes` and, once you know it, `tilecast:poster`.
 
 For video audio: `assets` `make_music` with the planned style and duration (or the user's own track), then retime the big moments to its strong cues; add effects with `make_sfx` or `add_sfx`.
 
